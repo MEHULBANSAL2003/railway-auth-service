@@ -1,8 +1,11 @@
 spring:
   application:
     name: auth-service
+  config:
+    import: optional:file:${HOME}/Sites/railways/railway-secrets/auth-secrets/auth-${spring.profiles.active}.env
 
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
-
+server:
+  port: 8080
