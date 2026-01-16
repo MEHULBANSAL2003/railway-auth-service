@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(ApiConstants.AUTH_BASE)
 public class AuthController {
 
-  @PostMapping(ApiConstants.SIGN_UP)
+  @PostMapping(ApiConstants.USER_SIGNUP_GET_OTP)
   public String signupGetOtp(){
     return "hello";
   };
