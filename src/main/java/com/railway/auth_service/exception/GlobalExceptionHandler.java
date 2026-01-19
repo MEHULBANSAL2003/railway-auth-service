@@ -18,7 +18,7 @@ public class GlobalExceptionHandler {
     );
 
     return ResponseEntity
-      .badRequest()
+      .status(ex.getHttpStatus())
       .body(ApiErrorResponse.error(error));
   }
 
