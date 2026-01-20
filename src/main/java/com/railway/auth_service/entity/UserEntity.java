@@ -1,4 +1,5 @@
 package com.railway.auth_service.entity;
+import com.railway.auth_service.enums.AuthProvider;
 import com.railway.auth_service.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,10 +16,10 @@ import lombok.Setter;
 
 import java.time.Instant;
 
-@Entity
-@Table(name = "users")
 @Getter
 @Setter
+@Entity
+@Table(name = "users")
 public class UserEntity {
 
   @Id
@@ -41,11 +42,16 @@ public class UserEntity {
   @Column(unique = true)
   private String email;
 
-  @Column(nullable = false)
+
   private String hashedPassword;
 
+  private String oauthProviderId;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private AuthProvider authProvider;
+
   private Boolean isActive;
-  private Boolean isVerified;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
