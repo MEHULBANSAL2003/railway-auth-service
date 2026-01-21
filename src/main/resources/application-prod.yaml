@@ -19,3 +19,8 @@ jwt:
     expiry-ms: ${JWT_ACCESS_EXPIRY:900000}
   refresh-token:
     expiry-ms: ${JWT_REFRESH_EXPIRY:2592000000}
+
+google:
+  client:
+    id: ${GOOGLE_CLIENT_ID}
+    secret: ${GOOGLE_CLIENT_SECRET}
