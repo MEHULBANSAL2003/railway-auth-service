@@ -1,64 +1,146 @@
+# ========================================
+# DEVELOPMENT ENVIRONMENT CONFIGURATION
+# ========================================
+
 spring:
+  # Application identification
+  application:
+    name: train-booking-app
+
+  # Database configuration
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
+    # HikariCP connection pool settings (development)
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+
+  # JPA/Hibernate configuration
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: update  # OK for dev - auto-updates schema
+    show-sql: true      # Show SQL in logs
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 20
+          fetch_size: 50
+        order_inserts: true
+        order_updates: true
 
+  # Jackson JSON configuration
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: true  # Pretty print in dev
+
+# JWT configuration
 jwt:
   secret: ${JWT_SECRET}
   access-token:
-    expiry-ms: ${JWT_ACCESS_EXPIRY:900000}
+    expiry-ms: ${JWT_ACCESS_EXPIRY:900000}      # 15 minutes default
   refresh-token:
-    expiry-ms: ${JWT_REFRESH_EXPIRY:2592000000}
+    expiry-ms: ${JWT_REFRESH_EXPIRY:2592000000} # 30 days default
 
+# Google OAuth configuration
 google:
   client:
     id: ${GOOGLE_CLIENT_ID}
     secret: ${GOOGLE_CLIENT_SECRET}
 
-logging:
-  level:
-    root: INFO
-    com.railway.auth_service: DEBUG
-    org.springframework.web: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-  file:
-    name: logs/train-booking-dev.log
-    max-size: 10MB
-    max-history: 7  # Keep 7 days of logs
-
+# ========================================
+# ACTUATOR & MONITORING (DEVELOPMENT)
+# ========================================
 management:
+  # Expose all endpoints in development
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus,loggers,env
+        include: "*"  # All endpoints available
       base-path: /actuator
+
+  # Endpoint-specific settings
   endpoint:
     health:
-      show-details: always
+      show-details: always        # Show full health details
+      show-components: always
     metrics:
       enabled: true
     prometheus:
       enabled: true
+    loggers:
+      enabled: true
+    env:
+      enabled: true
+      show-values: always
+
+  # Metrics configuration
   metrics:
     export:
       prometheus:
         enabled: true
+        step: 1m  # Scrape interval
+
+    # Enable detailed metrics
     distribution:
       percentiles-histogram:
         http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 100ms, 200ms, 500ms, 1s, 2s
+
+    # Add tags to all metrics
     tags:
       application: ${spring.application.name}
       environment: dev
+      region: local
+
+  # Application info
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+
+# ========================================
+# SERVER CONFIGURATION (DEVELOPMENT)
+# ========================================
+server:
+  port: 8080
+
+  # Error handling - verbose in dev
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: always
+    include-exception: true
+
+  # Compression
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+
+# ========================================
+# ADDITIONAL DEV SETTINGS
+# ========================================
+
+# Enable debug mode
+debug: false
+
+# Show banner
+spring.main.banner-mode: console

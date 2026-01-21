@@ -1,69 +1,209 @@
+# ========================================
+# PRODUCTION ENVIRONMENT CONFIGURATION
+# ========================================
+
 spring:
+  # Application identification
+  application:
+    name: train-booking-app
+
+  # Database configuration
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
+    # HikariCP connection pool settings (production-optimized)
+    hikari:
+      maximum-pool-size: 20        # More connections for prod traffic
+      minimum-idle: 10
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      leak-detection-threshold: 120000
+      connection-test-query: SELECT 1
+
+  # JPA/Hibernate configuration
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: false
+      ddl-auto: validate  # NEVER auto-update in production
+    show-sql: false       # Never log SQL in production
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        use_sql_comments: false
+        jdbc:
+          batch_size: 50
+          fetch_size: 100
+        order_inserts: true
+        order_updates: true
+        # Enable second-level cache if using
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
 
+  # Jackson JSON configuration
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: false  # No pretty print in prod (saves bandwidth)
+
+# JWT configuration
 jwt:
   secret: ${JWT_SECRET}
   access-token:
-    expiry-ms: ${JWT_ACCESS_EXPIRY:900000}
+    expiry-ms: ${JWT_ACCESS_EXPIRY:900000}      # 15 minutes
   refresh-token:
-    expiry-ms: ${JWT_REFRESH_EXPIRY:2592000000}
+    expiry-ms: ${JWT_REFRESH_EXPIRY:2592000000} # 30 days
 
+# Google OAuth configuration
 google:
   client:
     id: ${GOOGLE_CLIENT_ID}
     secret: ${GOOGLE_CLIENT_SECRET}
 
-logging:
-  level:
-    root: INFO
-    com.railway.auth_service: INFO
-    org.springframework.web: WARN
-    org.hibernate: WARN
-  file:
-    name: logs/train-booking-prod.log
-    max-size: 100MB
-    max-history: 30
-  pattern:
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
+# ========================================
+# ACTUATOR & MONITORING (PRODUCTION)
+# ========================================
 management:
+  # Expose only necessary endpoints
   endpoints:
     web:
       exposure:
-        include: health,metrics,prometheus
+        include: health,metrics,prometheus  # Limited endpoints
       base-path: /actuator
+
+  # Endpoint-specific settings
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: when-authorized  # Hide details from public
+      show-components: when-authorized
+      probes:
+        enabled: true  # Enable Kubernetes liveness/readiness probes
     metrics:
       enabled: true
     prometheus:
       enabled: true
+
+  # Health checks
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
+      threshold: 10GB  # Alert if less than 10GB free
+
+  # Metrics configuration
   metrics:
     export:
       prometheus:
         enabled: true
+        step: 1m
+
+    # Enable detailed metrics for monitoring
     distribution:
       percentiles-histogram:
         http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 100ms, 200ms, 500ms, 1s, 2s
+
+    # Add tags to all metrics
     tags:
       application: ${spring.application.name}
       environment: prod
+      region: ${REGION:unknown}
+      instance: ${HOSTNAME:unknown}
 
+  # Application info (visible in /actuator/info)
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: false  # Hide Java version in prod
+    os:
+      enabled: false  # Hide OS info in prod
+
+# ========================================
+# SERVER CONFIGURATION (PRODUCTION)
+# ========================================
 server:
   port: 8080
+
+  # Error handling - secure in production
   error:
-    include-message: never
-    include-stacktrace: never
+    include-message: never      # Never expose error messages
+    include-binding-errors: never
+    include-stacktrace: never   # Never expose stack traces
+    include-exception: false
+    whitelabel:
+      enabled: false
+
+  # Compression (save bandwidth)
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+
+  # Graceful shutdown
+  shutdown: graceful
+
+  # Tomcat/Undertow settings
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    connection-timeout: 20000
+    max-connections: 10000
+    accept-count: 100
+    max-http-form-post-size: 2MB
+
+# ========================================
+# SPRING LIFECYCLE
+# ========================================
+spring.lifecycle.timeout-per-shutdown-phase: 30s
+
+# ========================================
+# SECURITY HEADERS (if using Spring Security)
+# ========================================
+# These should ideally be configured in SecurityConfig class
+# But can be set here as fallback
+
+# ========================================
+# LOGGING (handled by logback-spring.xml)
+# ========================================
+# No logging config here - all in logback-spring.xml
+
+# ========================================
+# ADDITIONAL PROD SETTINGS
+# ========================================
+
+# Disable debug mode
+debug: false
+
+# Disable banner in prod (cleaner logs)
+spring.main.banner-mode: off
+
+# Fail fast on startup errors
+spring.main.register-shutdown-hook: true
+
+# ========================================
+# ENVIRONMENT VARIABLES REQUIRED IN PROD
+# ========================================
+# Make sure these are set:
+# - DB_URL
+# - DB_USER
+# - DB_PASSWORD
+# - JWT_SECRET (strong secret, at least 256 bits)
+# - GOOGLE_CLIENT_ID
+# - GOOGLE_CLIENT_SECRET
+# - REGION (optional, for metrics tagging)
+# - HOSTNAME (optional, auto-set in containers)
