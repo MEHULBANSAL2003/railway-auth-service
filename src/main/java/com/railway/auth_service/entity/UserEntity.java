@@ -8,6 +8,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -15,6 +17,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -47,6 +50,9 @@ public class UserEntity {
 
   private String oauthProviderId;
 
+  @Column(unique = true)
+  private String googleId;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private AuthProvider authProvider;
@@ -57,8 +63,25 @@ public class UserEntity {
   @Column(nullable = false)
   private Role role;
 
-  private Instant lastLoginAt;
-  private Instant createdAt;
-  private Instant updatedAt;
+  @Column(nullable = false)
+  private LocalDateTime lastLoginAt;
+
+  @Column(nullable = false, updatable = false)
+  private LocalDateTime createdAt;
+
+  @Column(nullable = false)
+  private LocalDateTime updatedAt;
+
+  @PrePersist
+  protected void onCreate() {
+    createdAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now();
+    lastLoginAt = LocalDateTime.now();
+  }
+
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = LocalDateTime.now();
+  }
 
 }
