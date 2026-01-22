@@ -1,0 +1,156 @@
+{
+  "dashboard": {
+    "title": "Railway Auth Service - Spring Boot Metrics",
+    "tags": ["spring-boot", "railway", "auth-service"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "10s",
+
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Request Rate (req/s)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(http_server_requests_seconds_count{application=\"railway-auth-service\"}[5m])",
+            "legendFormat": "{{uri}} - {{method}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"format": "short"}
+        ]
+      },
+
+      {
+        "id": 2,
+        "title": "API Response Time (p95)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{application=\"railway-auth-service\"}[5m])) by (le, uri))",
+            "legendFormat": "{{uri}} (p95)",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Response Time"},
+          {"format": "short"}
+        ]
+      },
+
+      {
+        "id": 3,
+        "title": "JVM Memory Used",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "jvm_memory_used_bytes{application=\"railway-auth-service\", area=\"heap\"}",
+            "legendFormat": "Heap Memory",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes", "label": "Memory"},
+          {"format": "short"}
+        ]
+      },
+
+      {
+        "id": 4,
+        "title": "HTTP Status Codes",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_seconds_count{application=\"railway-auth-service\"}[5m])) by (status)",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps"},
+          {"format": "short"}
+        ]
+      },
+
+      {
+        "id": 5,
+        "title": "Success Rate (%)",
+        "type": "singlestat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_seconds_count{application=\"railway-auth-service\",status=~\"2..\"}[5m])) / sum(rate(http_server_requests_seconds_count{application=\"railway-auth-service\"}[5m])) * 100",
+            "refId": "A"
+          }
+        ],
+        "format": "percent",
+        "valueName": "current"
+      },
+
+      {
+        "id": 6,
+        "title": "Active Threads",
+        "type": "singlestat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16},
+        "targets": [
+          {
+            "expr": "jvm_threads_live_threads{application=\"railway-auth-service\"}",
+            "refId": "A"
+          }
+        ],
+        "format": "none",
+        "valueName": "current"
+      },
+
+      {
+        "id": 7,
+        "title": "Database Connections",
+        "type": "singlestat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "hikaricp_connections_active{application=\"railway-auth-service\"}",
+            "refId": "A"
+          }
+        ],
+        "format": "none",
+        "valueName": "current"
+      },
+
+      {
+        "id": 8,
+        "title": "CPU Usage",
+        "type": "singlestat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 16},
+        "targets": [
+          {
+            "expr": "system_cpu_usage{application=\"railway-auth-service\"} * 100",
+            "refId": "A"
+          }
+        ],
+        "format": "percent",
+        "valueName": "current"
+      }
+    ],
+
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m"],
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    }
+  },
+
+  "overwrite": true
+}

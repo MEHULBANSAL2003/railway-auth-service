@@ -1,0 +1,299 @@
+# ============================================
+# PROMTAIL CONFIGURATION
+# ============================================
+# Promtail is a log shipping agent
+# It reads log files and sends them to Loki
+# This config defines:
+# - Where to find log files
+# - How to parse them
+# - What labels to add
+# - Where to send them (Loki)
+# ============================================
+
+# ============================================
+# SERVER CONFIGURATION
+# ============================================
+server:
+  # HTTP server port (for metrics and health checks)
+  http_listen_port: 9080
+
+  # gRPC server port (disabled)
+  grpc_listen_port: 0
+
+  # Log level: debug, info, warn, error
+  log_level: info
+
+# ============================================
+# POSITIONS CONFIGURATION
+# ============================================
+# Promtail saves file read positions here
+# Ensures no log duplication after restart
+positions:
+  # File where positions are saved
+  filename: /tmp/positions.yaml
+
+  # Sync positions to disk every 10s
+  sync_period: 10s
+
+# ============================================
+# CLIENTS CONFIGURATION
+# ============================================
+# Where to send logs (Loki)
+clients:
+  # Loki endpoint
+  - url: http://loki:3100/loki/api/v1/push
+
+    # Batch configuration
+    # Promtail batches logs before sending (efficiency)
+    batchwait: 1s          # Wait 1s to accumulate logs
+    batchsize: 1048576     # Or send when batch reaches 1MB
+
+    # Timeout for sending batch
+    timeout: 10s
+
+    # Backoff configuration (retry on failure)
+    backoff_config:
+      min_period: 500ms    # Wait 500ms before first retry
+      max_period: 5m       # Max wait between retries
+      max_retries: 10      # Give up after 10 retries
+
+    # External labels added to all logs
+    external_labels:
+      cluster: 'local'
+      environment: 'dev'
+
+# ============================================
+# SCRAPE CONFIGURATIONS
+# ============================================
+# Define what log files to read and how to process them
+scrape_configs:
+
+  # ------------------------------------------
+  # SCRAPE 1: Railway Auth Service Logs
+  # ------------------------------------------
+  # Reads logs from your Spring Boot application
+  - job_name: railway-auth-service
+
+    # Pipeline stages: Process logs in sequence
+    pipeline_stages:
+
+      # STAGE 1: REGEX - Extract fields from log line
+      # Parses standard logback pattern:
+      # 2025-01-22 10:30:15.123 [thread] LEVEL logger - message
+      - regex:
+          expression: '^(?P<timestamp>\S+\s+\S+)\s+\[(?P<thread>.*?)\]\s+(?P<level>\S+)\s+(?P<logger>\S+)\s+-\s+(?P<message>.*)$'
+
+      # STAGE 2: LABELS - Extract labels from parsed fields
+      # Labels are used for filtering in Grafana
+      - labels:
+          level:      # Log level (INFO, ERROR, etc.)
+          logger:     # Logger name (class name)
+          thread:     # Thread name
+
+      # STAGE 3: TIMESTAMP - Parse timestamp into proper format
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05.000'  # Go time format
+
+      # STAGE 4: OUTPUT - What to send to Loki
+      - output:
+          source: message  # Send the message field
+
+    # Static configuration: File locations
+    static_configs:
+      # Target 1: Production logs
+      - targets:
+          - localhost
+        labels:
+          job: railway-auth-service
+          environment: prod
+          __path__: /logs/prod/*.log  # Read all .log files in prod
+
+      # Target 2: Development logs
+      - targets:
+          - localhost
+        labels:
+          job: railway-auth-service
+          environment: dev
+          __path__: /logs/dev/*.log   # Read all .log files in dev
+
+  # ------------------------------------------
+  # SCRAPE 2: JSON Logs (Production)
+  # ------------------------------------------
+  # Reads JSON-formatted logs for structured parsing
+  - job_name: railway-auth-service-json
+
+    pipeline_stages:
+      # STAGE 1: JSON - Parse JSON log lines
+      - json:
+          expressions:
+            level: level              # Extract "level" field
+            timestamp: "@timestamp"   # Extract "@timestamp" field
+            message: message          # Extract "message" field
+            logger: logger_name       # Extract "logger_name" field
+            thread: thread_name       # Extract "thread_name" field
+            app: app                  # Extract "app" field
+
+      # STAGE 2: LABELS - Create labels from JSON fields
+      - labels:
+          level:
+          logger:
+          app:
+
+      # STAGE 3: TIMESTAMP - Use timestamp from JSON
+      - timestamp:
+          source: timestamp
+          format: RFC3339  # ISO 8601 format
+
+      # STAGE 4: OUTPUT
+      - output:
+          source: message
+
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: railway-auth-service-json
+          environment: prod
+          format: json
+          __path__: /logs/prod/*-json.log  # Only JSON log files
+
+  # ------------------------------------------
+  # SCRAPE 3: Error Logs (Separate Stream)
+  # ------------------------------------------
+  # Create a dedicated stream for errors
+  # Makes it easier to query only errors
+  - job_name: railway-auth-service-errors
+
+    pipeline_stages:
+      # Same parsing as regular logs
+      - regex:
+          expression: '^(?P<timestamp>\S+\s+\S+)\s+\[(?P<thread>.*?)\]\s+(?P<level>\S+)\s+(?P<logger>\S+)\s+-\s+(?P<message>.*)$'
+
+      - labels:
+          level:
+          logger:
+
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05.000'
+
+      - output:
+          source: message
+
+    static_configs:
+      # Only read error log files
+      - targets:
+          - localhost
+        labels:
+          job: railway-auth-service
+          environment: prod
+          severity: error
+          __path__: /logs/prod/*-error.log
+
+# ============================================
+# ADVANCED PIPELINE STAGES (Examples)
+# ============================================
+# Uncomment and modify as needed
+
+# ------------------------------------------
+# DROP STAGE - Filter out unwanted logs
+# ------------------------------------------
+# Drop logs that match certain patterns
+# Example: Drop health check logs
+# - drop:
+#     source: "message"
+#     expression: ".*health.*"
+#     drop_counter_reason: "health_check"
+
+# ------------------------------------------
+# MATCH STAGE - Conditional processing
+# ------------------------------------------
+# Apply different processing based on log content
+# Example: Add label only for payment-related logs
+# - match:
+#     selector: '{job="railway-auth-service"} |= "payment"'
+#     stages:
+#       - labels:
+#           payment: "true"
+
+# ------------------------------------------
+# MULTILINE STAGE - Handle stack traces
+# ------------------------------------------
+# Combine multiple lines into single log entry
+# Useful for Java stack traces
+# - multiline:
+#     firstline: '^\d{4}-\d{2}-\d{2}'  # Line starting with date
+#     max_wait_time: 3s
+#     max_lines: 100
+
+# ------------------------------------------
+# METRICS STAGE - Generate metrics from logs
+# ------------------------------------------
+# Count specific log patterns
+# Example: Count error occurrences
+# - metrics:
+#     error_total:
+#       type: Counter
+#       description: "Total errors"
+#       source: level
+#       config:
+#         value: ERROR
+#         action: inc
+
+# ============================================
+# IMPORTANT NOTES FOR DEVELOPERS
+# ============================================
+#
+# 1. FILE PATHS:
+#    - __path__ is relative to container filesystem
+#    - In docker-compose.yml, we mount: ../logs:/logs
+#    - So /logs/prod/*.log in container = ../logs/prod/*.log on host
+#    - Adjust paths if your log location is different
+#
+# 2. LABEL CARDINALITY:
+#    - Be careful with high-cardinality labels (user IDs, request IDs)
+#    - Each unique label combination = separate stream in Loki
+#    - Too many streams = performance issues
+#    - Good labels: environment, level, job, service
+#    - Bad labels: user_id, request_id, timestamp
+#
+# 3. REGEX PATTERN:
+#    - Must match your log format exactly
+#    - Test regex at: https://regex101.com/
+#    - Current pattern matches: YYYY-MM-DD HH:MM:SS.mmm [thread] LEVEL logger - message
+#    - If your format is different, update the regex
+#
+# 4. PIPELINE ORDER MATTERS:
+#    - Stages execute in sequence: regex → labels → timestamp → output
+#    - Labels must be extracted before they can be used
+#    - Timestamp parsing should happen before output
+#
+# 5. TESTING:
+#    - Check Promtail logs: docker logs promtail
+#    - Verify file paths: docker exec promtail ls /logs
+#    - Check positions file: docker exec promtail cat /tmp/positions.yaml
+#    - View metrics: curl http://localhost:9080/metrics
+#
+# 6. TROUBLESHOOTING:
+#    - Logs not appearing in Loki?
+#      a) Check file paths are correct
+#      b) Verify regex pattern matches log format
+#      c) Check Loki is accessible from Promtail
+#      d) Look at Promtail logs for errors
+#    - Duplicate logs?
+#      a) Check positions file
+#      b) Restart Promtail: docker-compose restart promtail
+#
+# 7. PERFORMANCE:
+#    - Reading too many files? Increase batchsize
+#    - Logs delayed? Decrease batchwait
+#    - High CPU? Simplify regex patterns
+#
+# 8. LOG ROTATION:
+#    - Promtail handles rotated files automatically
+#    - Tracks files by inode, not name
+#    - Compressed files (.gz) are NOT read
+#    - Only active and recently rotated files are read
+#
+# ============================================
