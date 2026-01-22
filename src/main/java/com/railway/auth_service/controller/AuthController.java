@@ -22,7 +22,7 @@ public class AuthController {
   public ResponseEntity<ApiResponse<Object>> signupGetOtp() {
     Map<String, Object> result = new HashMap<>();
     result.put("name", "mehul");
-    log.info("in signup constroller");
+    log.info("in signup controller");
     return ResponseEntity.ok(ApiResponse.success(result));
   }
 }

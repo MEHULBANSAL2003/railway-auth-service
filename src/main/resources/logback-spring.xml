@@ -2,17 +2,16 @@
 <configuration>
   <!--
     INCLUDE SPRING BOOT DEFAULTS
-    This gives us pre-configured patterns and properties from Spring Boot
   -->
   <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
   <!--
-    PROPERTIES: Define variables used throughout the config
-    These can be overridden by environment variables or Spring properties
+    BASE PROPERTIES
   -->
   <property name="APP_NAME" value="railway-auth-service"/>
-  <property name="LOG_PATH" value="${LOG_PATH:-logs}"/>
-  <property name="PROFILE" value="${spring.profiles.active:-dev}"/>
+
+  <!-- Base log directory (can be overridden by environment variable) -->
+  <property name="LOG_BASE" value="${LOG_BASE:-logs}"/>
 
   <!-- ========================================== -->
   <!-- CONSOLE APPENDER (Development) -->
@@ -25,88 +24,47 @@
   </appender>
 
   <!-- ========================================== -->
-  <!-- FILE APPENDER (All Logs) -->
-  <!-- ========================================== -->
-  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>${LOG_PATH}/${APP_NAME}-${PROFILE}.log</file>
-    <encoder>
-      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n</pattern>
-      <charset>UTF-8</charset>
-    </encoder>
-    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-      <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-      <maxFileSize>100MB</maxFileSize>
-      <maxHistory>30</maxHistory>
-      <totalSizeCap>3GB</totalSizeCap>
-      <cleanHistoryOnStart>true</cleanHistoryOnStart>
-    </rollingPolicy>
-  </appender>
-
-  <!-- ========================================== -->
-  <!-- ERROR FILE APPENDER (Errors Only) -->
-  <!-- ========================================== -->
-  <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>${LOG_PATH}/${APP_NAME}-${PROFILE}-error.log</file>
-    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-      <level>ERROR</level>
-    </filter>
-    <encoder>
-      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n%ex{full}</pattern>
-      <charset>UTF-8</charset>
-    </encoder>
-    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-      <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-      <maxFileSize>50MB</maxFileSize>
-      <maxHistory>60</maxHistory>
-      <totalSizeCap>1GB</totalSizeCap>
-    </rollingPolicy>
-  </appender>
-
-  <!-- ========================================== -->
-  <!-- JSON APPENDER (Production - for Loki/ELK) -->
-  <!-- ========================================== -->
-  <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>${LOG_PATH}/${APP_NAME}-${PROFILE}-json.log</file>
-    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-      <customFields>{"app":"${APP_NAME}"}</customFields>
-      <includeCallerData>false</includeCallerData>
-      <includeMdcKeyName>traceId</includeMdcKeyName>
-      <includeMdcKeyName>spanId</includeMdcKeyName>
-    </encoder>
-    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-      <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-json-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-      <maxFileSize>100MB</maxFileSize>
-      <maxHistory>30</maxHistory>
-      <totalSizeCap>3GB</totalSizeCap>
-    </rollingPolicy>
-  </appender>
-
-  <!-- ========================================== -->
-  <!-- ASYNC APPENDERS (Performance Optimization) -->
-  <!-- ========================================== -->
-  <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
-    <appender-ref ref="FILE"/>
-    <queueSize>512</queueSize>
-    <discardingThreshold>0</discardingThreshold>
-    <includeCallerData>false</includeCallerData>
-  </appender>
-
-  <appender name="ASYNC_ERROR" class="ch.qos.logback.classic.AsyncAppender">
-    <appender-ref ref="ERROR_FILE"/>
-    <queueSize>256</queueSize>
-    <discardingThreshold>0</discardingThreshold>
-  </appender>
-
-  <appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
-    <appender-ref ref="JSON_FILE"/>
-    <queueSize>512</queueSize>
-    <discardingThreshold>0</discardingThreshold>
-  </appender>
-
-  <!-- ========================================== -->
-  <!-- DEVELOPMENT PROFILE -->
+  <!-- DEVELOPMENT PROFILE - logs/dev/ directory -->
   <!-- ========================================== -->
   <springProfile name="dev,local">
+    <!-- Set log path for dev -->
+    <property name="LOG_PATH" value="${LOG_BASE}/dev"/>
+
+    <!-- FILE APPENDER (All Logs) -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>${LOG_PATH}/${APP_NAME}.log</file>
+      <encoder>
+        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n</pattern>
+        <charset>UTF-8</charset>
+      </encoder>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+        <maxFileSize>100MB</maxFileSize>
+        <maxHistory>7</maxHistory>
+        <totalSizeCap>1GB</totalSizeCap>
+        <cleanHistoryOnStart>true</cleanHistoryOnStart>
+      </rollingPolicy>
+    </appender>
+
+    <!-- ERROR FILE APPENDER -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>${LOG_PATH}/${APP_NAME}-error.log</file>
+      <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+        <level>ERROR</level>
+      </filter>
+      <encoder>
+        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n%ex{full}</pattern>
+        <charset>UTF-8</charset>
+      </encoder>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+        <maxFileSize>50MB</maxFileSize>
+        <maxHistory>7</maxHistory>
+        <totalSizeCap>500MB</totalSizeCap>
+      </rollingPolicy>
+    </appender>
+
+    <!-- ROOT LOGGER for DEV -->
     <root level="INFO">
       <appender-ref ref="CONSOLE"/>
       <appender-ref ref="FILE"/>
@@ -128,7 +86,7 @@
       <appender-ref ref="CONSOLE"/>
     </logger>
 
-    <!-- SQL parameters (very verbose) -->
+    <!-- SQL parameters -->
     <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
       <appender-ref ref="CONSOLE"/>
     </logger>
@@ -140,9 +98,84 @@
   </springProfile>
 
   <!-- ========================================== -->
-  <!-- PRODUCTION PROFILE -->
+  <!-- PRODUCTION PROFILE - logs/prod/ directory -->
   <!-- ========================================== -->
   <springProfile name="prod">
+    <!-- Set log path for prod -->
+    <property name="LOG_PATH" value="${LOG_BASE}/prod"/>
+
+    <!-- FILE APPENDER (All Logs) -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>${LOG_PATH}/${APP_NAME}.log</file>
+      <encoder>
+        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n</pattern>
+        <charset>UTF-8</charset>
+      </encoder>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+        <maxFileSize>100MB</maxFileSize>
+        <maxHistory>30</maxHistory>
+        <totalSizeCap>3GB</totalSizeCap>
+        <cleanHistoryOnStart>true</cleanHistoryOnStart>
+      </rollingPolicy>
+    </appender>
+
+    <!-- ERROR FILE APPENDER -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>${LOG_PATH}/${APP_NAME}-error.log</file>
+      <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+        <level>ERROR</level>
+      </filter>
+      <encoder>
+        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n%ex{full}</pattern>
+        <charset>UTF-8</charset>
+      </encoder>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+        <maxFileSize>50MB</maxFileSize>
+        <maxHistory>60</maxHistory>
+        <totalSizeCap>1GB</totalSizeCap>
+      </rollingPolicy>
+    </appender>
+
+    <!-- JSON APPENDER (for Loki/ELK) -->
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>${LOG_PATH}/${APP_NAME}-json.log</file>
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <customFields>{"app":"${APP_NAME}","environment":"prod"}</customFields>
+        <includeCallerData>false</includeCallerData>
+        <includeMdcKeyName>traceId</includeMdcKeyName>
+        <includeMdcKeyName>spanId</includeMdcKeyName>
+      </encoder>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-json-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+        <maxFileSize>100MB</maxFileSize>
+        <maxHistory>30</maxHistory>
+        <totalSizeCap>3GB</totalSizeCap>
+      </rollingPolicy>
+    </appender>
+
+    <!-- ASYNC APPENDERS for performance -->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+      <appender-ref ref="FILE"/>
+      <queueSize>512</queueSize>
+      <discardingThreshold>0</discardingThreshold>
+      <includeCallerData>false</includeCallerData>
+    </appender>
+
+    <appender name="ASYNC_ERROR" class="ch.qos.logback.classic.AsyncAppender">
+      <appender-ref ref="ERROR_FILE"/>
+      <queueSize>256</queueSize>
+      <discardingThreshold>0</discardingThreshold>
+    </appender>
+
+    <appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
+      <appender-ref ref="JSON_FILE"/>
+      <queueSize>512</queueSize>
+      <discardingThreshold>0</discardingThreshold>
+    </appender>
+
+    <!-- ROOT LOGGER for PROD -->
     <root level="INFO">
       <appender-ref ref="ASYNC_FILE"/>
       <appender-ref ref="ASYNC_ERROR"/>
@@ -181,9 +214,11 @@
   </springProfile>
 
   <!-- ========================================== -->
-  <!-- TEST PROFILE -->
+  <!-- TEST PROFILE - logs/test/ directory -->
   <!-- ========================================== -->
   <springProfile name="test">
+    <property name="LOG_PATH" value="${LOG_BASE}/test"/>
+
     <root level="INFO">
       <appender-ref ref="CONSOLE"/>
     </root>
