@@ -5,7 +5,7 @@
 spring:
   # Application identification
   application:
-    name: train-booking-app
+    name: railway-auth-service
 
   # Database configuration
   datasource:

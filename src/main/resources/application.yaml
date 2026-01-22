@@ -1,6 +1,6 @@
 spring:
   application:
-    name: auth-service
+    name: railway-auth-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
