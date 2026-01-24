@@ -119,7 +119,7 @@ public class AuthServiceImpl implements AuthService{
         .accessToken(accessToken)
         .refreshToken(refreshTokenEntity.getToken())
         .expiresIn(accessTokenExpiryMs / 1000)
-        .adminId(user.getId())
+        .id(user.getId())
         .email(user.getEmail())
         .name(name)
         .userName(user.getUserName())

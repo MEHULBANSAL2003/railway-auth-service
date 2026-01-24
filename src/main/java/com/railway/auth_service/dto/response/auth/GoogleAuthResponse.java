@@ -19,7 +19,7 @@ public class GoogleAuthResponse {
   private String accessToken;
   private String refreshToken;
   private Long expiresIn;
-  private Long adminId;
+  private Long id;
   private String email;
   private String name;
   private Role role;
