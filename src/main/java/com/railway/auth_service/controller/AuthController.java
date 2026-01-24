@@ -7,6 +7,7 @@ import com.railway.auth_service.dto.response.auth.GoogleAuthResponse;
 import com.railway.auth_service.exception.ApiResponse;
 import com.railway.auth_service.service.authService.AuthServiceImpl;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping(ApiConstants.AUTH_BASE)
+@RequiredArgsConstructor
 public class AuthController {
 
-  @Autowired
-    AuthServiceImpl authServiceImpl;
+  private final AuthServiceImpl authServiceImpl;
 
   @PostMapping(ApiConstants.LOGIN_ADMIN)
   public ResponseEntity<ApiResponse<GoogleAuthResponse>> adminLoginByEmail(@Valid @RequestBody GoogleAuthRequest requestPayload) {
