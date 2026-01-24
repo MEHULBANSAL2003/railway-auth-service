@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -22,7 +23,11 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "users")
+@Table(name = "users",indexes = {
+  @Index(name = "idx_email", columnList = "email"),
+  @Index(name = "idx_phone", columnList = "phoneNumber"),
+  @Index(name = "idx_google_id", columnList = "googleId")
+})
 public class UserEntity {
 
   @Id
@@ -57,7 +62,8 @@ public class UserEntity {
   @Column(nullable = false)
   private AuthProvider authProvider;
 
-  private Boolean isActive;
+  @Column(nullable = false)
+  private Boolean isActive = true;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
