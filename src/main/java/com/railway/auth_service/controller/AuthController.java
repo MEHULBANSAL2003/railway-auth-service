@@ -3,7 +3,9 @@ package com.railway.auth_service.controller;
 
 import com.railway.auth_service.constants.ApiConstants;
 import com.railway.auth_service.dto.request.auth.GoogleAuthRequest;
+import com.railway.auth_service.dto.request.auth.RefreshTokenRequest;
 import com.railway.auth_service.dto.response.auth.GoogleAuthResponse;
+import com.railway.auth_service.dto.response.auth.RefreshTokenResponse;
 import com.railway.auth_service.exception.ApiResponse;
 import com.railway.auth_service.service.authService.AuthServiceImpl;
 import jakarta.validation.Valid;
@@ -24,9 +26,18 @@ public class AuthController {
   private final AuthServiceImpl authServiceImpl;
 
   @PostMapping(ApiConstants.LOGIN_ADMIN)
-  public ResponseEntity<ApiResponse<GoogleAuthResponse>> adminLoginByEmail(@Valid @RequestBody GoogleAuthRequest requestPayload) {
+  public ResponseEntity<ApiResponse<GoogleAuthResponse>> adminLoginByEmail(@Valid @RequestBody GoogleAuthRequest request) {
     log.info("Admin Google login request received");
-    GoogleAuthResponse g = authServiceImpl.googleTokenVerify(requestPayload);
-    return ResponseEntity.ok(ApiResponse.success(g));
+    GoogleAuthResponse response = authServiceImpl.googleTokenVerify(request);
+    return ResponseEntity.ok(ApiResponse.success(response));
   }
+
+  @PostMapping(ApiConstants.REFRESH_ACCESS_TOKEN)
+  public ResponseEntity<ApiResponse<RefreshTokenResponse>> generateNewAccessToken(@Valid @RequestBody RefreshTokenRequest request){
+    log.info("Refresh token request received");
+    RefreshTokenResponse response = authServiceImpl.refreshAccessToken(request);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+
 }

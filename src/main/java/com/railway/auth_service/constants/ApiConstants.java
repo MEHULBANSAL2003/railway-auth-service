@@ -10,4 +10,9 @@ public class ApiConstants {
 
   public static final String CREATE_ADMIN = "/admin/create/account";
   public static final String LOGIN_ADMIN = "/admin/login/by/email";
+
+  public static final String REFRESH_ACCESS_TOKEN = "/refresh/access/token";
+
+  public static final String LOGOUT_CURRENT_DEVICE = "/logout";
+  public static final String LOGOUT_ALL_DEVICES = "logout/all/devices";
 }
