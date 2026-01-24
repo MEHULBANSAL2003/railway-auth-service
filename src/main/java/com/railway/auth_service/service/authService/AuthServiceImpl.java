@@ -3,17 +3,20 @@ package com.railway.auth_service.service.authService;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.railway.auth_service.config.googleOAuthConfig.GoogleOAuthConfig;
 import com.railway.auth_service.dto.request.auth.GoogleAuthRequest;
+import com.railway.auth_service.dto.request.auth.RefreshTokenRequest;
 import com.railway.auth_service.dto.response.auth.GoogleAuthResponse;
+import com.railway.auth_service.dto.response.auth.RefreshTokenResponse;
+import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.entity.UserEntity;
 import com.railway.auth_service.enums.Role;
 import com.railway.auth_service.exception.BaseException;
 import com.railway.auth_service.repository.UserRepository;
 import com.railway.auth_service.service.jwtService.JwtService;
+import com.railway.auth_service.service.refreshTokenService.RefreshTokenService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +37,7 @@ public class AuthServiceImpl implements AuthService{
   private final UserRepository userRepository;
   private final JwtService jwtService;
   private final GoogleOAuthConfig googleConfig;
+  private final RefreshTokenService refreshTokenService;
 
   @Value("${jwt.access-token.expiry-ms}")
   private Long accessTokenExpiryMs;
@@ -109,11 +113,11 @@ public class AuthServiceImpl implements AuthService{
       log.info("Admin login successful for: {}", email);
 
       String accessToken = jwtService.generateAccessToken(user);
-      String refreshToken = jwtService.generateRefreshToken(user);
+      RefreshTokenEntity refreshTokenEntity = refreshTokenService.createRefreshToken(user.getId());
 
       return GoogleAuthResponse.builder()
         .accessToken(accessToken)
-        .refreshToken(refreshToken)
+        .refreshToken(refreshTokenEntity.getToken())
         .expiresIn(accessTokenExpiryMs / 1000)
         .adminId(user.getId())
         .email(user.getEmail())
@@ -131,7 +135,6 @@ public class AuthServiceImpl implements AuthService{
     } catch (BaseException e) {
       throw e;
     } catch (GeneralSecurityException | IOException e) {
-      // These are thrown when token verification fails
       log.error("Google token verification failed: {}", e.getMessage());
       throw new BaseException(
         HttpStatus.UNAUTHORIZED,
@@ -147,4 +150,76 @@ public class AuthServiceImpl implements AuthService{
       );
     }
   }
+
+  @Override
+  @Transactional
+  public RefreshTokenResponse refreshAccessToken(RefreshTokenRequest request) {
+    log.info("Refreshing access token");
+
+    try {
+      // Verify refresh token
+      RefreshTokenEntity refreshToken = refreshTokenService.verifyRefreshToken(
+        request.getRefreshToken()
+      );
+
+      // Get user
+      UserEntity user = userRepository.findById(refreshToken.getUserId())
+        .orElseThrow(() -> new BaseException(HttpStatus.UNAUTHORIZED,"USER_NOT_FOUND","No user found"));
+
+      // Check if user is still active
+      if (!user.getIsActive()) {
+        throw new BaseException( HttpStatus.FORBIDDEN,
+          "ACCOUNT_DEACTIVATED",
+          "Your account has been deactivated. Please contact support.");
+      }
+
+      // Generate new access token
+      String newAccessToken = jwtService.generateAccessToken(user);
+
+      // Rotate refresh token (best practice)
+      RefreshTokenEntity newRefreshToken = refreshTokenService.rotateRefreshToken(
+        request.getRefreshToken()
+      );
+
+      log.info("Access token refreshed for user: {}", user.getEmail());
+
+      // Build response
+      return RefreshTokenResponse.builder()
+        .accessToken(newAccessToken)
+        .refreshToken(newRefreshToken.getToken())
+        .expiresIn(accessTokenExpiryMs / 1000)
+        .userId(user.getId())
+        .email(user.getEmail())
+        .role(user.getRole().name())
+        .build();
+
+    } catch (BaseException e) {
+      log.error("Failed to refresh access token", e);
+      throw e;
+    }
+  }
+
+  @Override
+  @Transactional
+  public void logout(String refreshToken) {
+    log.info("Processing logout");
+
+    try {
+      refreshTokenService.revokeRefreshToken(refreshToken);
+      log.info("User logged out successfully");
+    } catch (Exception e) {
+      log.error("Logout failed", e);
+      throw new RuntimeException("Logout failed: " + e.getMessage());
+    }
+  }
+
+  @Override
+  @Transactional
+  public void logoutAllDevices(Long userId) {
+    log.info("Logging out user from all devices: {}", userId);
+
+    refreshTokenService.revokeAllUserTokens(userId);
+    log.info("User logged out from all devices: {}", userId);
+  }
+
 }
