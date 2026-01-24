@@ -25,7 +25,7 @@ public class GoogleAuthResponse {
   private Role role;
   private String userName;
   private LocalDateTime createdAt;
-  private LocalDateTime updatedAt;
+  private LocalDateTime lastLoginAt;
   private String countryCode;
   private String phoneNumber;
   private String profilePicture;
