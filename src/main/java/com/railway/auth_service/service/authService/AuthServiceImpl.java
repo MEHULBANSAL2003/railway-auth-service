@@ -123,7 +123,6 @@ public class AuthServiceImpl implements AuthService{
         .email(user.getEmail())
         .name(name)
         .userName(user.getUserName())
-        .role(user.getRole())
         .phoneNumber(user.getPhoneNumber())
         .countryCode(user.getCountryCode())
         .profilePicture(picture)
