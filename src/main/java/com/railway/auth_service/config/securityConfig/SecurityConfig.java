@@ -1,5 +1,6 @@
 package com.railway.auth_service.config.securityConfig;
 import com.railway.auth_service.constants.ApiConstants;
+import com.railway.auth_service.filter.JwtAuthenticationEntryPoint;
 import com.railway.auth_service.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -36,7 +38,9 @@ public class SecurityConfig {
         .anyRequest().authenticated()
 
       )
-      .exceptionHandling(AbstractHttpConfigurer::disable)
+      .exceptionHandling(exception -> exception
+        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+      )
       .sessionManagement(session -> session
         .sessionCreationPolicy(
           SessionCreationPolicy.STATELESS)
