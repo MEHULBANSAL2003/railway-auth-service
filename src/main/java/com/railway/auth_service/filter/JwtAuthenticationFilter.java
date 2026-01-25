@@ -1,6 +1,9 @@
 package com.railway.auth_service.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.railway.auth_service.exception.ApiError;
+import com.railway.auth_service.exception.ApiErrorResponse;
+import com.railway.auth_service.exception.BaseException;
 import com.railway.auth_service.service.jwtService.JwtService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -10,6 +13,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -74,18 +79,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       // Token has expired
       log.error("JWT token expired: {}", e.getMessage());
       request.setAttribute("exception", "Token expired");
+      handleAuthenticationError(response, "TOKEN_EXPIRED", "JWT token has expired");
 
     } catch (MalformedJwtException e) {
       // Token format is wrong
       log.error("Malformed JWT token: {}", e.getMessage());
       request.setAttribute("exception", "Invalid token format");
+      handleAuthenticationError(response, "INVALID_TOKEN", "Invalid JWT token format");
 
     } catch (Exception e) {
       // Any other error
       log.error("JWT authentication failed: {}", e.getMessage());
       request.setAttribute("exception", "Authentication failed");
+      handleAuthenticationError(response, "INVALID_TOKEN", "Token is not valid");
     }
 
+  }
+
+  private void handleAuthenticationError(HttpServletResponse response, String code, String message) throws IOException {
+    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+    response.setCharacterEncoding("UTF-8");
+    ApiError error = new ApiError(code, message, null);
+    ApiErrorResponse errorResponse = ApiErrorResponse.error(error);
+    response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
   }
 
 }

@@ -6,6 +6,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -80,6 +81,21 @@ public class GlobalExceptionHandler {
       .status(HttpStatus.METHOD_NOT_ALLOWED)
       .body(ApiErrorResponse.error(error));
   }
+
+  @ExceptionHandler(AccessDeniedException.class)
+  public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+
+    ApiError error = new ApiError(
+      "ACCESS_DENIED",
+      "You don't have permission to access this resource",
+      null
+    );
+
+    return ResponseEntity
+      .status(HttpStatus.FORBIDDEN)
+      .body(ApiErrorResponse.error(error));
+  }
+
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception ex) {
