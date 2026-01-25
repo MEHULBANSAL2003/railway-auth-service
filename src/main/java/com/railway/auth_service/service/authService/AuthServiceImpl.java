@@ -61,7 +61,7 @@ public class AuthServiceImpl implements AuthService{
       if (idToken == null) {
         log.error("Google token verification failed");
         throw new BaseException(
-          HttpStatus.UNAUTHORIZED,
+          HttpStatus.FORBIDDEN,
           "INVALID_TOKEN",
           "Invalid Google authentication token"
         );
@@ -136,7 +136,7 @@ public class AuthServiceImpl implements AuthService{
     } catch (GeneralSecurityException | IOException e) {
       log.error("Google token verification failed: {}", e.getMessage());
       throw new BaseException(
-        HttpStatus.UNAUTHORIZED,
+        HttpStatus.FORBIDDEN,
         "INVALID_TOKEN",
         "Invalid or expired Google authentication token"
       );
@@ -163,7 +163,7 @@ public class AuthServiceImpl implements AuthService{
 
       // Get user
       UserEntity user = userRepository.findById(refreshToken.getUserId())
-        .orElseThrow(() -> new BaseException(HttpStatus.UNAUTHORIZED,"USER_NOT_FOUND","No user found"));
+        .orElseThrow(() -> new BaseException(HttpStatus.FORBIDDEN,"USER_NOT_FOUND","No user found"));
 
       // Check if user is still active
       if (!user.getIsActive()) {
