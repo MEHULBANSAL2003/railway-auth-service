@@ -13,12 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RefreshTokenResponse {
-
   private String accessToken;
   private String refreshToken;
-  private Long expiresIn;
-
   private Long userId;
   private String email;
-  private String role;
 }

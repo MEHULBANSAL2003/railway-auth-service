@@ -21,6 +21,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -36,6 +41,7 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
     http
+      .cors(cors -> cors.configurationSource(corsConfigurationSource()))
       .csrf(AbstractHttpConfigurer::disable)
       .authorizeHttpRequests(auth -> auth
         .requestMatchers(ApiConstants.AUTH_BASE + "/**").permitAll()
@@ -66,6 +72,43 @@ public class SecurityConfig {
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
+  }
+
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+
+    // Allow credentials
+    configuration.setAllowCredentials(true);
+
+    // Allowed origins
+    configuration.setAllowedOrigins(Arrays.asList(
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:5173"
+    ));
+
+    // Allowed headers
+    configuration.setAllowedHeaders(Arrays.asList("*"));
+
+    // Allowed methods
+    configuration.setAllowedMethods(Arrays.asList(
+      "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
+    ));
+
+    // Expose headers to frontend
+    configuration.setExposedHeaders(Arrays.asList(
+      "Authorization",
+      "Content-Type"
+    ));
+
+    // Cache preflight for 1 hour
+    configuration.setMaxAge(3600L);
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+
+    return source;
   }
 
   @Bean

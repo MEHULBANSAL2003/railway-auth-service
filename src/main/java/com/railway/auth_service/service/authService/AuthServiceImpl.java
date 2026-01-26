@@ -186,10 +186,8 @@ public class AuthServiceImpl implements AuthService{
       return RefreshTokenResponse.builder()
         .accessToken(newAccessToken)
         .refreshToken(newRefreshToken.getToken())
-        .expiresIn(accessTokenExpiryMs / 1000)
         .userId(user.getId())
         .email(user.getEmail())
-        .role(user.getRole().name())
         .build();
 
     } catch (BaseException e) {
