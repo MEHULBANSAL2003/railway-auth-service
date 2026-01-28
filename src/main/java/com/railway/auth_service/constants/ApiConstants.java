@@ -8,7 +8,6 @@ public class ApiConstants {
   public static final String USER_SIGNUP_GET_OTP ="/user/signup/get-otp";
   public static final String USER_SIGNUP_OTP_VERIFY = "/user/signup/otp/verify";
 
-  public static final String CREATE_ADMIN = "/admin/create/account";
   public static final String LOGIN_ADMIN = "/admin/login/by/email";
 
   public static final String REFRESH_ACCESS_TOKEN = "/refresh/access/token";
