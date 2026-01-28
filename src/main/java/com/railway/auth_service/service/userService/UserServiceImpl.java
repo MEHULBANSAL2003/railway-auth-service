@@ -6,15 +6,11 @@ import com.railway.auth_service.exception.BaseException;
 import com.railway.auth_service.service.refreshTokenService.RefreshTokenService;
 import com.railway.auth_service.utils.SecurityUtils;
 import jakarta.transaction.Transactional;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
-import java.util.Date;
-
 
 @Service
 @Slf4j
