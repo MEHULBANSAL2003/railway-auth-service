@@ -1,12 +1,12 @@
 package com.railway.auth_service.service.refreshTokenService;
 
-
 import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.entity.UserEntity;
 import com.railway.auth_service.exception.BaseException;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
 import com.railway.auth_service.service.jwtService.JwtService;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -32,26 +32,38 @@ public class RefreshTokenService {
   public RefreshTokenEntity createRefreshToken(Long userId) {
     log.debug("Creating refresh token for user: {}", userId);
 
-    UserEntity user = userRepository.findById(userId)
-      .orElseThrow(() -> new BaseException(HttpStatus.BAD_REQUEST,"USER_NOT_FOUND","User not found with id: " + userId));
+    try {
+      UserEntity user = userRepository.findById(userId)
+        .orElseThrow(() -> new BaseException(HttpStatus.BAD_REQUEST, "USER_NOT_FOUND", "User not found with id: " + userId));
 
-    // Generate JWT refresh token
-    String tokenString = jwtService.generateRefreshToken(user);
+      // Generate JWT refresh token
+      String tokenString = jwtService.generateRefreshToken(user);
 
-    // Calculate expiry date
-    LocalDateTime expiryDate = LocalDateTime.now()
-      .plusSeconds(refreshTokenExpiryMs / 1000);
+      // Calculate expiry date
+      LocalDateTime expiryDate = LocalDateTime.now()
+        .plusSeconds(refreshTokenExpiryMs / 1000);
 
-    // Create entity
-    RefreshTokenEntity refreshToken = RefreshTokenEntity.builder()
-      .token(tokenString)
-      .userId(userId)
-      .expiryDate(expiryDate)
-      .isRevoked(false)
-      .build();
+      // Create entity
+      RefreshTokenEntity refreshToken = RefreshTokenEntity.builder()
+        .token(tokenString)
+        .userId(userId)
+        .expiryDate(expiryDate)
+        .isRevoked(false)
+        .build();
 
-    // Save to database
-    return refreshTokenRepository.save(refreshToken);
+      // Save to database
+      return refreshTokenRepository.save(refreshToken);
+
+    } catch (BaseException e) {
+      // Re-throw business exceptions as-is
+      throw e;
+    } catch (DataAccessException e) {
+      log.error("Database error while creating refresh token for user: {}", userId, e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_CREATION_FAILED", "Failed to create refresh token");
+    } catch (Exception e) {
+      log.error("Unexpected error while creating refresh token for user: {}", userId, e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_CREATION_FAILED", "An unexpected error occurred while creating refresh token");
+    }
   }
 
   /**
@@ -61,79 +73,133 @@ public class RefreshTokenService {
   public RefreshTokenEntity verifyRefreshToken(String token) {
     log.debug("Verifying refresh token");
 
-    // Find token in database
-    RefreshTokenEntity refreshToken = refreshTokenRepository.findByToken(token)
-      .orElseThrow(() -> new BaseException(HttpStatus.UNAUTHORIZED,"TOKEN_NOT_FOUND","Refresh token not found"));
-
-    // Check if token is revoked
-    if (refreshToken.getIsRevoked()) {
-      log.warn("Attempted to use revoked refresh token for user: {}", refreshToken.getUserId());
-      throw new BaseException(HttpStatus.UNAUTHORIZED,"TOKEN_REVOKED","Refresh token revoked");
-    }
-
-    // Check if token is expired
-    if (refreshToken.isRefreshTokenExpired()) {
-      log.warn("Expired refresh token used for user: {}", refreshToken.getUserId());
-      refreshTokenRepository.delete(refreshToken);
-      throw new BaseException(HttpStatus.UNAUTHORIZED,"TOKEN_EXPIRED","Refresh token has expired. Please login again.");
-    }
-
-    // Verify JWT signature
     try {
-      jwtService.validateToken(token);
+      // Find token in database
+      RefreshTokenEntity refreshToken = refreshTokenRepository.findByToken(token)
+        .orElseThrow(() -> new BaseException(HttpStatus.UNAUTHORIZED, "TOKEN_NOT_FOUND", "Refresh token not found"));
+
+      // Check if token is revoked
+      if (refreshToken.getIsRevoked()) {
+        log.warn("Attempted to use revoked refresh token for user: {}", refreshToken.getUserId());
+        throw new BaseException(HttpStatus.UNAUTHORIZED, "TOKEN_REVOKED", "Refresh token revoked");
+      }
+
+      // Check if token is expired
+      if (refreshToken.isRefreshTokenExpired()) {
+        log.warn("Expired refresh token used for user: {}", refreshToken.getUserId());
+        refreshTokenRepository.delete(refreshToken);
+        throw new BaseException(HttpStatus.UNAUTHORIZED, "TOKEN_EXPIRED", "Refresh token has expired. Please login again.");
+      }
+
+      // Verify JWT signature
+      try {
+        jwtService.validateToken(token);
+      } catch (Exception e) {
+        log.error("Invalid refresh token JWT: {}", e.getMessage());
+        throw new BaseException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid refresh token");
+      }
+
+      log.debug("Refresh token verified successfully for user: {}", refreshToken.getUserId());
+      return refreshToken;
+
+    } catch (BaseException e) {
+      // Re-throw business exceptions as-is
+      throw e;
+    } catch (DataAccessException e) {
+      log.error("Database error while verifying refresh token", e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_VERIFICATION_FAILED", "Failed to verify refresh token");
     } catch (Exception e) {
-      log.error("Invalid refresh token JWT: {}", e.getMessage());
-      throw new BaseException(HttpStatus.UNAUTHORIZED,"INVALID_TOKEN","Invalid refresh token");
+      log.error("Unexpected error while verifying refresh token", e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_VERIFICATION_FAILED", "An unexpected error occurred while verifying refresh token");
     }
-    log.debug("Refresh token verified successfully for user: {}", refreshToken.getUserId());
-    return refreshToken;
   }
 
   @Transactional
   public void revokeRefreshToken(String token) {
     log.debug("Revoking refresh token");
 
-    RefreshTokenEntity refreshToken = refreshTokenRepository.findByToken(token)
-      .orElseThrow(() -> new BaseException(HttpStatus.UNAUTHORIZED,"INVALID_TOKEN","Invalid refresh token"));
+    try {
+      RefreshTokenEntity refreshToken = refreshTokenRepository.findByToken(token)
+        .orElseThrow(() -> new BaseException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid refresh token"));
 
-    refreshToken.setIsRevoked(true);
-    refreshTokenRepository.save(refreshToken);
+      refreshToken.setIsRevoked(true);
+      refreshTokenRepository.save(refreshToken);
 
-    log.info("Refresh token revoked for user: {}", refreshToken.getUserId());
+      log.info("Refresh token revoked for user: {}", refreshToken.getUserId());
+
+    } catch (BaseException e) {
+      // Re-throw business exceptions as-is
+      throw e;
+    } catch (DataAccessException e) {
+      log.error("Database error while revoking refresh token", e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_REVOCATION_FAILED", "Failed to revoke refresh token");
+    } catch (Exception e) {
+      log.error("Unexpected error while revoking refresh token", e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_REVOCATION_FAILED", "An unexpected error occurred while revoking refresh token");
+    }
   }
 
   @Transactional
   public void revokeAllUserTokens(Long userId) {
     log.info("Revoking all refresh tokens for user: {}", userId);
-    refreshTokenRepository.revokeAllUserTokens(userId);
+
+    try {
+      refreshTokenRepository.revokeAllUserTokens(userId);
+      log.info("Successfully revoked all tokens for user: {}", userId);
+
+    } catch (DataAccessException e) {
+      log.error("Database error while revoking all tokens for user: {}", userId, e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_REVOCATION_FAILED", "Failed to revoke all refresh tokens");
+    } catch (Exception e) {
+      log.error("Unexpected error while revoking all tokens for user: {}", userId, e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_REVOCATION_FAILED", "An unexpected error occurred while revoking all refresh tokens");
+    }
   }
 
   @Transactional
   public void deleteExpiredTokens() {
     log.info("Deleting expired refresh tokens");
-    refreshTokenRepository.deleteExpiredTokens(LocalDateTime.now());
+
+    try {
+      refreshTokenRepository.deleteExpiredTokens(LocalDateTime.now());
+      log.info("Successfully deleted expired tokens");
+
+    } catch (DataAccessException e) {
+      log.error("Database error while deleting expired tokens", e);
+      // For background cleanup tasks, you might want to just log and not throw
+      // Or throw if you want the scheduler to know it failed and potentially retry
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_CLEANUP_FAILED", "Failed to delete expired tokens");
+    } catch (Exception e) {
+      log.error("Unexpected error while deleting expired tokens", e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_CLEANUP_FAILED", "An unexpected error occurred while deleting expired tokens");
+    }
   }
 
   @Transactional
   public RefreshTokenEntity rotateRefreshToken(String oldToken) {
     log.debug("Rotating refresh token");
 
-    RefreshTokenEntity oldRefreshToken = verifyRefreshToken(oldToken);
+    try {
+      RefreshTokenEntity oldRefreshToken = verifyRefreshToken(oldToken);
 
-    // Revoke old token
-    oldRefreshToken.setIsRevoked(true);
-    refreshTokenRepository.save(oldRefreshToken);
+      // Revoke old token
+      oldRefreshToken.setIsRevoked(true);
+      refreshTokenRepository.save(oldRefreshToken);
 
-    RefreshTokenEntity newRefreshToken = createRefreshToken(oldRefreshToken.getUserId());
+      RefreshTokenEntity newRefreshToken = createRefreshToken(oldRefreshToken.getUserId());
 
-    log.info("Refresh token rotated for user: {}", oldRefreshToken.getUserId());
-    return newRefreshToken;
+      log.info("Refresh token rotated for user: {}", oldRefreshToken.getUserId());
+      return newRefreshToken;
+
+    } catch (BaseException e) {
+      // Re-throw business exceptions as-is
+      throw e;
+    } catch (DataAccessException e) {
+      log.error("Database error while rotating refresh token", e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_ROTATION_FAILED", "Failed to rotate refresh token");
+    } catch (Exception e) {
+      log.error("Unexpected error while rotating refresh token", e);
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "TOKEN_ROTATION_FAILED", "An unexpected error occurred while rotating refresh token");
+    }
   }
-
-
-
-
-
-
-
 }

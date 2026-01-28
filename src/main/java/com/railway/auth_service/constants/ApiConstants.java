@@ -15,3 +15,4 @@ public class ApiConstants {
   public static final String LOGOUT_CURRENT_DEVICE = "/logout";
   public static final String LOGOUT_ALL_DEVICES = "logout/all/devices";
 }
+  
