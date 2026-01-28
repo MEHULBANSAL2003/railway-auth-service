@@ -12,6 +12,4 @@ public interface AuthService {
 
   GoogleAuthResponse googleTokenVerify(GoogleAuthRequest request);
   RefreshTokenResponse refreshAccessToken(RefreshTokenRequest request);
-  void logout(String refreshToken);
-  void logoutAllDevices(Long userId);
 }

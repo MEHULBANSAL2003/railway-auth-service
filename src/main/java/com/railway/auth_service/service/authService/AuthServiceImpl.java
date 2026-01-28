@@ -195,28 +195,4 @@ public class AuthServiceImpl implements AuthService{
       throw e;
     }
   }
-
-  @Override
-  @Transactional
-  public void logout(String refreshToken) {
-    log.info("Processing logout");
-
-    try {
-      refreshTokenService.revokeRefreshToken(refreshToken);
-      log.info("User logged out successfully");
-    } catch (Exception e) {
-      log.error("Logout failed", e);
-      throw new RuntimeException("Logout failed: " + e.getMessage());
-    }
-  }
-
-  @Override
-  @Transactional
-  public void logoutAllDevices(Long userId) {
-    log.info("Logging out user from all devices: {}", userId);
-
-    refreshTokenService.revokeAllUserTokens(userId);
-    log.info("User logged out from all devices: {}", userId);
-  }
-
 }
