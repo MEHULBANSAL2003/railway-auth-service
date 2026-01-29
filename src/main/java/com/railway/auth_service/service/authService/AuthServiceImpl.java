@@ -10,10 +10,12 @@ import com.railway.auth_service.dto.request.auth.GoogleAuthRequest;
 import com.railway.auth_service.dto.request.auth.RefreshTokenRequest;
 import com.railway.auth_service.dto.response.auth.GoogleAuthResponse;
 import com.railway.auth_service.dto.response.auth.RefreshTokenResponse;
+import com.railway.auth_service.entity.AdminEntity;
 import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.entity.UserEntity;
 import com.railway.auth_service.enums.Role;
 import com.railway.auth_service.exception.BaseException;
+import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.repository.UserAdminRepository;
 import com.railway.auth_service.service.jwtService.JwtService;
 import com.railway.auth_service.service.refreshTokenService.RefreshTokenService;
@@ -35,6 +37,7 @@ import java.util.Collections;
 public class AuthServiceImpl implements AuthService{
 
   private final UserAdminRepository userAdminRepository;
+  private final AdminRepository adminRepository;
   private final JwtService jwtService;
   private final GoogleOAuthConfig googleConfig;
   private final RefreshTokenService refreshTokenService;
@@ -47,7 +50,6 @@ public class AuthServiceImpl implements AuthService{
   @Transactional
   public GoogleAuthResponse googleTokenVerify(GoogleAuthRequest request) {
     log.info("Starting Google admin authentication");
-
     try {
       GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
         new NetHttpTransport(),
@@ -75,18 +77,18 @@ public class AuthServiceImpl implements AuthService{
 
       log.info("Google token verified successfully for email: {}", email);
 
-      UserEntity user = userAdminRepository.findByEmail(email)
+      AdminEntity admin = adminRepository.findByEmail(email)
         .orElseThrow(() -> {
           log.warn("Admin not found for email: {}", email);
           return new BaseException(
-            HttpStatus.FORBIDDEN,
+            HttpStatus.NOT_FOUND,
             "ADMIN_NOT_FOUND",
             "You are not authorized to access the admin panel. Please contact the system administrator."
           );
         });
 
-      if (user.getRole() != Role.ROLE_ADMIN) {
-        log.warn("User with email {} attempted admin login but has role: {}", email, user.getRole());
+      if (!admin.hasAdminPrivileges()) {
+        log.warn("User with email {} attempted admin login but has role: {}", email, admin.getAdminRole());
         throw new BaseException(
           HttpStatus.FORBIDDEN,
           "INSUFFICIENT_PRIVILEGES",
@@ -94,7 +96,7 @@ public class AuthServiceImpl implements AuthService{
         );
       }
 
-      if (!user.getIsActive()) {
+      if (!admin.getIsActive()) {
         log.warn("Inactive admin account attempted login: {}", email);
         throw new BaseException(
           HttpStatus.FORBIDDEN,
@@ -103,32 +105,31 @@ public class AuthServiceImpl implements AuthService{
         );
       }
 
-      if (user.getGoogleId() == null || !user.getGoogleId().equals(googleId)) {
-        user.setGoogleId(googleId);
+      if (admin.getGoogleId() == null || !admin.getGoogleId().equals(googleId)) {
+        admin.setGoogleId(googleId);
       }
 
-      user.setLastLoginAt(LocalDateTime.now());
-      userAdminRepository.save(user);
+      admin.setLastLoginAt(LocalDateTime.now());
+      adminRepository.save(admin);
 
       log.info("Admin login successful for: {}", email);
 
-      String accessToken = jwtService.generateAccessToken(user);
-      RefreshTokenEntity refreshTokenEntity = refreshTokenService.createRefreshToken(user.getId());
+      String accessToken = jwtService.generateAccessToken(admin.getId(),admin.getEmail(),admin.getAdminRole(), "admin");
+      RefreshTokenEntity refreshTokenEntity = refreshTokenService.createRefreshToken(admin.getId());
 
       return GoogleAuthResponse.builder()
         .accessToken(accessToken)
         .refreshToken(refreshTokenEntity.getToken())
         .expiresIn(accessTokenExpiryMs / 1000)
-        .id(user.getId())
-        .email(user.getEmail())
+        .id(admin.getId())
+        .email(admin.getEmail())
         .name(name)
-        .userName(user.getUserName())
-        .phoneNumber(user.getPhoneNumber())
-        .countryCode(user.getCountryCode())
+        .phoneNumber(admin.getPhoneNumber())
+        .countryCode(admin.getCountryCode())
         .profilePicture(picture)
-        .isActive(user.getIsActive())
-        .createdAt(user.getCreatedAt())
-        .lastLoginAt(user.getLastLoginAt())
+        .isActive(admin.getIsActive())
+        .createdAt(admin.getCreatedAt())
+        .lastLoginAt(admin.getLastLoginAt())
         .build();
 
     } catch (BaseException e) {

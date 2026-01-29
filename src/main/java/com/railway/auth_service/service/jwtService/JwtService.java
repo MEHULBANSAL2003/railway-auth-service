@@ -2,6 +2,7 @@
 package com.railway.auth_service.service.jwtService;
 
 import com.railway.auth_service.entity.UserEntity;
+import com.railway.auth_service.enums.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -36,13 +37,18 @@ public class JwtService {
    * Generate access token with user claims
    * Payload includes: userId, email, role (ROLE_ADMIN/ROLE_USER)
    */
-  public String generateAccessToken(UserEntity user) {
+  public String generateAccessToken(Long id, String email, Role role,String type) {
     Map<String, Object> claims = new HashMap<>();
-    claims.put("id", user.getId());
-    claims.put("role", user.getRole().name());
+    if ("ADMIN".equalsIgnoreCase(type)) {
+      claims.put("adminId", id);
+    } else if ("USER".equalsIgnoreCase(type)) {
+      claims.put("userId", id);
+    }
+    claims.put("id", id);
+    claims.put("role", role.name());
     return Jwts.builder()
       .setClaims(claims)
-      .setSubject(user.getEmail())
+      .setSubject(email)
       .setIssuedAt(new Date())
       .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiry))
       .signWith(getSigningKey(), SignatureAlgorithm.HS256)

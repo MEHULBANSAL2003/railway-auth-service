@@ -1,8 +1,8 @@
 package com.railway.auth_service.entity;
 
 
-import com.railway.auth_service.enums.AdminRole;
 import com.railway.auth_service.enums.Department;
+import com.railway.auth_service.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -59,7 +59,7 @@ public class AdminEntity {
   @Enumerated(EnumType.STRING)
   @Column(name = "admin_role", nullable = false, length = 50)
   @Builder.Default
-  private AdminRole adminRole = AdminRole.ADMIN;
+  private Role adminRole = Role.ADMIN;
 
   @Column(name = "department", length = 100)
   @Builder.Default
@@ -68,6 +68,13 @@ public class AdminEntity {
   @Column(name = "is_active", nullable = false)
   @Builder.Default
   private Boolean isActive = true;
+
+  @Column(name="country_code", nullable = false)
+  @Builder.Default
+  private String countryCode = "+91";
+
+  @Column(name="phone_number", nullable = false, unique = true)
+  private String phoneNumber;
 
   @Column(name = "last_login_at")
   private LocalDateTime lastLoginAt;
@@ -104,7 +111,11 @@ public class AdminEntity {
   }
 
   public boolean isSuperAdmin() {
-    return AdminRole.SUPER_ADMIN.equals(this.adminRole);
+    return Role.SUPER_ADMIN.equals(this.adminRole);
+  }
+
+  public boolean hasAdminPrivileges() {
+    return Role.ADMIN.equals(this.adminRole) || isSuperAdmin();
   }
 
 
