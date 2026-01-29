@@ -11,4 +11,5 @@ public interface UserAdminRepository extends JpaRepository<UserEntity,Long> {
   Optional<UserEntity> findByEmail(String email);
   Optional<UserEntity> findByGoogleId(String googleId);
   Boolean existsByEmail(String email);
+ // Optional<UserEntity> findById(Long id);
 }

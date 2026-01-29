@@ -1,8 +1,11 @@
 package com.railway.auth_service.service.userAdminService;
 
+import com.railway.auth_service.dto.response.user.AdminUpdateStatusResponse;
 import com.railway.auth_service.dto.response.user.LogoutAllDeviceResponse;
 import com.railway.auth_service.dto.response.user.LogoutCurrentDeviceResponse;
+import com.railway.auth_service.entity.UserEntity;
 import com.railway.auth_service.exception.BaseException;
+import com.railway.auth_service.repository.UserAdminRepository;
 import com.railway.auth_service.service.refreshTokenService.RefreshTokenService;
 import com.railway.auth_service.utils.SecurityUtils;
 import jakarta.transaction.Transactional;
@@ -11,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -18,6 +22,7 @@ import java.time.LocalDateTime;
 public class UserAdminServiceImpl implements UserAdminService {
 
   private final RefreshTokenService refreshTokenService;
+  private final UserAdminRepository userAdminRepository;
 
   @Override
   @Transactional
@@ -63,6 +68,38 @@ public class UserAdminServiceImpl implements UserAdminService {
     } catch (Exception e) {
       log.error("Unexpected error during logout from all devices for user: {}", id, e);
       throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "LOGOUT_FAILED", "Failed to logout from all devices");
+    }
+  }
+
+  @Override
+  @Transactional
+  public AdminUpdateStatusResponse updateUserStatus(Long id, Boolean status) {
+    try {
+      log.info("Updating user status. userId={}, isActive={}", id, status);
+      UserEntity user = userAdminRepository.findById(id)
+        .orElseThrow(() ->
+          new BaseException(
+            HttpStatus.NOT_FOUND,
+            "USER_NOT_FOUND",
+            "No user found"
+          )
+        );
+      user.setIsActive(status);
+
+      userAdminRepository.save(user);
+
+      return AdminUpdateStatusResponse.builder()
+        .message("Status upadated Successfully")
+        .isActive(status)
+        .build();
+    }
+    catch (BaseException e) {
+      log.error("Failed to update user status: {}", e.getMessage());
+      throw e;
+    }
+    catch (Exception e) {
+      log.error("Unexpected error while updating user status: {}", e.getMessage());
+      throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR, "UPDATE_STATUS_FAILED", "Failed to update user status");
     }
   }
 }
