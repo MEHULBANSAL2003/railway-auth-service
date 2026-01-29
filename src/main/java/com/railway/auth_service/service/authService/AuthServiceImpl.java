@@ -14,7 +14,7 @@ import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.entity.UserEntity;
 import com.railway.auth_service.enums.Role;
 import com.railway.auth_service.exception.BaseException;
-import com.railway.auth_service.repository.UserRepository;
+import com.railway.auth_service.repository.UserAdminRepository;
 import com.railway.auth_service.service.jwtService.JwtService;
 import com.railway.auth_service.service.refreshTokenService.RefreshTokenService;
 import jakarta.transaction.Transactional;
@@ -34,7 +34,7 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService{
 
-  private final UserRepository userRepository;
+  private final UserAdminRepository userAdminRepository;
   private final JwtService jwtService;
   private final GoogleOAuthConfig googleConfig;
   private final RefreshTokenService refreshTokenService;
@@ -75,7 +75,7 @@ public class AuthServiceImpl implements AuthService{
 
       log.info("Google token verified successfully for email: {}", email);
 
-      UserEntity user = userRepository.findByEmail(email)
+      UserEntity user = userAdminRepository.findByEmail(email)
         .orElseThrow(() -> {
           log.warn("Admin not found for email: {}", email);
           return new BaseException(
@@ -108,7 +108,7 @@ public class AuthServiceImpl implements AuthService{
       }
 
       user.setLastLoginAt(LocalDateTime.now());
-      userRepository.save(user);
+      userAdminRepository.save(user);
 
       log.info("Admin login successful for: {}", email);
 
@@ -162,7 +162,7 @@ public class AuthServiceImpl implements AuthService{
       );
 
       // Get user
-      UserEntity user = userRepository.findById(refreshToken.getUserId())
+      UserEntity user = userAdminRepository.findById(refreshToken.getUserId())
         .orElseThrow(() -> new BaseException(HttpStatus.FORBIDDEN,"USER_NOT_FOUND","No user found"));
 
       // Check if user is still active

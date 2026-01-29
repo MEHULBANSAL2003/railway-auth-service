@@ -4,7 +4,7 @@ import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.entity.UserEntity;
 import com.railway.auth_service.exception.BaseException;
 import com.railway.auth_service.repository.RefreshTokenRepository;
-import com.railway.auth_service.repository.UserRepository;
+import com.railway.auth_service.repository.UserAdminRepository;
 import com.railway.auth_service.service.jwtService.JwtService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 public class RefreshTokenService {
 
   private final RefreshTokenRepository refreshTokenRepository;
-  private final UserRepository userRepository;
+  private final UserAdminRepository userAdminRepository;
   private final JwtService jwtService;
 
   @Value("${jwt.refresh-token.expiry-ms}")
@@ -33,7 +33,7 @@ public class RefreshTokenService {
     log.debug("Creating refresh token for user: {}", userId);
 
     try {
-      UserEntity user = userRepository.findById(userId)
+      UserEntity user = userAdminRepository.findById(userId)
         .orElseThrow(() -> new BaseException(HttpStatus.BAD_REQUEST, "USER_NOT_FOUND", "User not found with id: " + userId));
 
       // Generate JWT refresh token

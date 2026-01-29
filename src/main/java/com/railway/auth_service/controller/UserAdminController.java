@@ -4,7 +4,7 @@ import com.railway.auth_service.dto.request.user.LogoutCurrentDeviceRequest;
 import com.railway.auth_service.dto.response.user.LogoutAllDeviceResponse;
 import com.railway.auth_service.dto.response.user.LogoutCurrentDeviceResponse;
 import com.railway.auth_service.exception.ApiResponse;
-import com.railway.auth_service.service.userService.UserServiceImpl;
+import com.railway.auth_service.service.userAdminService.UserAdminServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(ApiConstants.API_BASE)
 @RequiredArgsConstructor
-public class UserController {
+public class UserAdminController {
 
-  private final UserServiceImpl userService;
+  private final UserAdminServiceImpl userService;
 
 
   @PostMapping(ApiConstants.LOGOUT_CURRENT_DEVICE)

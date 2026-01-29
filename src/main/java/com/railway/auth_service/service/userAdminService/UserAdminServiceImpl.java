@@ -1,4 +1,4 @@
-package com.railway.auth_service.service.userService;
+package com.railway.auth_service.service.userAdminService;
 
 import com.railway.auth_service.dto.response.user.LogoutAllDeviceResponse;
 import com.railway.auth_service.dto.response.user.LogoutCurrentDeviceResponse;
@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class UserServiceImpl implements UserService {
+public class UserAdminServiceImpl implements UserAdminService {
 
   private final RefreshTokenService refreshTokenService;
 
