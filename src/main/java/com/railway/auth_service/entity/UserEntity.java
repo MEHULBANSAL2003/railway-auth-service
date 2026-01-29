@@ -38,7 +38,7 @@ public class UserEntity {
   @NotBlank
   private String name;
 
-  @Column(nullable = false, unique = true, length = 50)
+  @Column(length = 50)
   private String userName;
 
   @Column(unique = true)

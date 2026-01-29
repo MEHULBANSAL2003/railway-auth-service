@@ -1,7 +1,9 @@
 package com.railway.auth_service.controller;
 import com.railway.auth_service.constants.ApiConstants;
+import com.railway.auth_service.dto.request.user.CreateAdminRequest;
 import com.railway.auth_service.dto.request.user.LogoutCurrentDeviceRequest;
 import com.railway.auth_service.dto.response.user.AdminUpdateStatusResponse;
+import com.railway.auth_service.dto.response.user.CreateAdminResponse;
 import com.railway.auth_service.dto.response.user.LogoutAllDeviceResponse;
 import com.railway.auth_service.dto.response.user.LogoutCurrentDeviceResponse;
 import com.railway.auth_service.exception.ApiResponse;
@@ -46,6 +48,14 @@ public class UserAdminController {
   public ResponseEntity<ApiResponse<AdminUpdateStatusResponse>> updateStatus(@PathVariable Long adminId, @RequestParam Boolean status){
       log.info("Update admin status request received");
       AdminUpdateStatusResponse response = userAdminService.updateUserStatus(adminId, status);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PreAuthorize("hasRole('ROLE_ADMIN')")
+  @PostMapping(ApiConstants.ADMIN_CREATE)
+  public ResponseEntity<ApiResponse<CreateAdminResponse>> createNewAdmin(@Valid @RequestBody CreateAdminRequest request){
+    log.info("create admin request received");
+    CreateAdminResponse response = userAdminService.createAdmin(request);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 

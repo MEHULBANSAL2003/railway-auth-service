@@ -1,6 +1,8 @@
 package com.railway.auth_service.service.userAdminService;
 
+import com.railway.auth_service.dto.request.user.CreateAdminRequest;
 import com.railway.auth_service.dto.response.user.AdminUpdateStatusResponse;
+import com.railway.auth_service.dto.response.user.CreateAdminResponse;
 import com.railway.auth_service.dto.response.user.LogoutAllDeviceResponse;
 import com.railway.auth_service.dto.response.user.LogoutCurrentDeviceResponse;
 
@@ -10,4 +12,5 @@ public interface UserAdminService {
   public LogoutAllDeviceResponse logoutFromAllDevices();
 
   public AdminUpdateStatusResponse updateUserStatus(Long id, Boolean status);
+  public CreateAdminResponse createAdmin(CreateAdminRequest request);
 }
