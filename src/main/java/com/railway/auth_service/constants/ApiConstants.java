@@ -11,8 +11,19 @@ public class ApiConstants {
   public static final String LOGIN_ADMIN = "/admin/login/by/email";
 
   public static final String REFRESH_ACCESS_TOKEN = "/refresh/access/token";
+  public static final String VALIDATE_TOKEN = "/validate/token";
 
   public static final String LOGOUT_CURRENT_DEVICE = "/logout";
   public static final String LOGOUT_ALL_DEVICES = "logout/all/devices";
+
+  public static final String ADMIN_PROFILE_GET = "/admin/profile";
+
+  public static final String ADMIN_CREATE = "/new/admin/create";
+  public static final String ADMIN_LIST = "/admin/list";
+  public static final String ADMIN_UPDATE_STATUS = "/admin/update/status"; // Activate/deactivate
+  public static final String ADMIN_UPDATE_ROLE = "/admin/role/update"; // Change permissions
+  public static final String ADMIN_DELETE = "/admin/delete/{id}";
+
+
 }
-  
+
