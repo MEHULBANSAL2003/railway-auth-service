@@ -85,6 +85,7 @@ public class UserAdminServiceImpl implements UserAdminService {
           )
         );
       user.setIsActive(status);
+      user.setUpdatedAt(LocalDateTime.now());
 
       userAdminRepository.save(user);
 
