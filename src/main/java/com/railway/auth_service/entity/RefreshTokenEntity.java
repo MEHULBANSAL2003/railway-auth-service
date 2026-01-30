@@ -75,19 +75,19 @@ public class RefreshTokenEntity {
 
   // ============ HELPER METHODS ============
 
-  public boolean isExpired() {
+  public boolean isRefreshTokenExpired() {
     return LocalDateTime.now().isAfter(this.expiryDate);
   }
 
-  public boolean isValid() {
-    return !isExpired() && !isRevoked;
+  public boolean isRefreshTokenValid() {
+    return !isRefreshTokenExpired() && !isRevoked;
   }
 
-  public void revoke() {
+  public void revokeRefreshToken() {
     this.isRevoked = true;
   }
 
-  public void updateLastUsed() {
+  public void updateLastUsedRefreshToken() {
     this.lastUsedAt = LocalDateTime.now();
   }
 

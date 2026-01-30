@@ -115,11 +115,11 @@ public class AuthServiceImpl implements AuthService{
       log.info("Admin login successful for: {}", email);
 
       String accessToken = jwtService.generateAccessToken(admin.getId(),admin.getEmail(),admin.getAdminRole(), "admin");
-      RefreshTokenEntity refreshTokenEntity = refreshTokenService.createRefreshToken(admin.getId());
+      RefreshTokenEntity refreshTokenEntity = refreshTokenService.createRefreshToken(admin.getId(), admin.getAdminRole());
 
       return GoogleAuthResponse.builder()
         .accessToken(accessToken)
-        .refreshToken(refreshTokenEntity.getToken())
+        .refreshToken(refreshTokenEntity.getRefreshToken())
         .expiresIn(accessTokenExpiryMs / 1000)
         .id(admin.getId())
         .email(admin.getEmail())

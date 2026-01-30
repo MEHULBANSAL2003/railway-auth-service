@@ -45,8 +45,8 @@ public class RefreshTokenService {
 
       // Create entity
       RefreshTokenEntity refreshToken = RefreshTokenEntity.builder()
-        .token(tokenString)
-        .userId(userId)
+        .refreshToken(tokenString)
+        .ownerId(userId)
         .expiryDate(expiryDate)
         .isRevoked(false)
         .build();
@@ -80,13 +80,13 @@ public class RefreshTokenService {
 
       // Check if token is revoked
       if (refreshToken.getIsRevoked()) {
-        log.warn("Attempted to use revoked refresh token for user: {}", refreshToken.getUserId());
+        log.warn("Attempted to use revoked refresh token for user: {}", refreshToken.getOwnerId());
         throw new BaseException(HttpStatus.UNAUTHORIZED, "TOKEN_REVOKED", "Refresh token revoked");
       }
 
       // Check if token is expired
       if (refreshToken.isRefreshTokenExpired()) {
-        log.warn("Expired refresh token used for user: {}", refreshToken.getUserId());
+        log.warn("Expired refresh token used for user: {}", refreshToken.getOwnerId());
         refreshTokenRepository.delete(refreshToken);
         throw new BaseException(HttpStatus.UNAUTHORIZED, "TOKEN_EXPIRED", "Refresh token has expired. Please login again.");
       }
@@ -99,7 +99,7 @@ public class RefreshTokenService {
         throw new BaseException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid refresh token");
       }
 
-      log.debug("Refresh token verified successfully for user: {}", refreshToken.getUserId());
+      log.debug("Refresh token verified successfully for user: {}", refreshToken.getOwnerId());
       return refreshToken;
 
     } catch (BaseException e) {
@@ -125,7 +125,7 @@ public class RefreshTokenService {
       refreshToken.setIsRevoked(true);
       refreshTokenRepository.save(refreshToken);
 
-      log.info("Refresh token revoked for user: {}", refreshToken.getUserId());
+      log.info("Refresh token revoked for user: {}", refreshToken.getOwnerId());
 
     } catch (BaseException e) {
       // Re-throw business exceptions as-is
@@ -144,7 +144,7 @@ public class RefreshTokenService {
     log.info("Revoking all refresh tokens for user: {}", userId);
 
     try {
-      refreshTokenRepository.revokeAllUserTokens(userId);
+      refreshTokenRepository.revokeAllTokens(userId);
       log.info("Successfully revoked all tokens for user: {}", userId);
 
     } catch (DataAccessException e) {
@@ -161,7 +161,7 @@ public class RefreshTokenService {
     log.info("Deleting expired refresh tokens");
 
     try {
-      refreshTokenRepository.deleteExpiredTokens(LocalDateTime.now());
+      refreshTokenRepository.deleteExpiredAndRevokedTokens(LocalDateTime.now());
       log.info("Successfully deleted expired tokens");
 
     } catch (DataAccessException e) {
@@ -186,9 +186,9 @@ public class RefreshTokenService {
       oldRefreshToken.setIsRevoked(true);
       refreshTokenRepository.save(oldRefreshToken);
 
-      RefreshTokenEntity newRefreshToken = createRefreshToken(oldRefreshToken.getUserId());
+      RefreshTokenEntity newRefreshToken = createRefreshToken(oldRefreshToken.getOwnerId());
 
-      log.info("Refresh token rotated for user: {}", oldRefreshToken.getUserId());
+      log.info("Refresh token rotated for user: {}", oldRefreshToken.getOwnerId());
       return newRefreshToken;
 
     } catch (BaseException e) {
