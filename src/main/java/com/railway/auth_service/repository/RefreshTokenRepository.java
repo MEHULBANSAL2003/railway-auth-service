@@ -1,6 +1,8 @@
 package com.railway.auth_service.repository;
 
 import com.railway.auth_service.entity.RefreshTokenEntity;
+import com.railway.auth_service.enums.Role;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,34 +16,42 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
   Optional<RefreshTokenEntity> findByToken(String token);
 
   /**
-   * Find all refresh tokens for a user
+   * Find all tokens for a user
    */
-  List<RefreshTokenEntity> findByUserId(Long userId);
+  List<RefreshTokenEntity> findByOwnerIdAndOwnerType(Long ownerId, Role ownerType);
 
   /**
    * Find all valid (non-revoked, non-expired) tokens for a user
    */
-  @Query("SELECT rt FROM RefreshTokenEntity rt WHERE rt.userId = :userId " +
-    "AND rt.isRevoked = false AND rt.expiryDate > :now")
-  List<RefreshTokenEntity> findValidTokensByUserId(Long userId, LocalDateTime now);
+  @Query("SELECT rt FROM RefreshToken rt WHERE rt.ownerId = :ownerId " +
+    "AND rt.ownerType = :ownerType " +
+    "AND rt.isRevoked = false " +
+    "AND rt.expiryDate > :now")
+  List<RefreshTokenEntity> findValidTokens(Long ownerId, Role ownerType, LocalDateTime now);
 
   /**
-   * Revoke all tokens for a user (useful for logout all devices)
+   * Revoke all tokens for a user (logout from all devices)
    */
   @Modifying
-  @Query("UPDATE RefreshTokenEntity rt SET rt.isRevoked = true " +
-    "WHERE rt.userId = :userId AND rt.isRevoked = false")
-  void revokeAllUserTokens(Long userId);
+  @Transactional
+  @Query("UPDATE RefreshToken rt SET rt.isRevoked = true " +
+    "WHERE rt.ownerId = :ownerId AND rt.ownerType = :ownerType")
+  void revokeAllTokens(Long ownerId, Role ownerType);
 
   /**
-   * Delete expired tokens (cleanup job)
+   * Delete all revoked or expired tokens (cleanup job)
    */
   @Modifying
-  @Query("DELETE FROM RefreshTokenEntity rt WHERE rt.expiryDate < :now")
-  void deleteExpiredTokens(LocalDateTime now);
+  @Transactional
+  @Query("DELETE FROM RefreshToken rt WHERE rt.isRevoked = true OR rt.expiryDate < :now")
+  void deleteExpiredAndRevokedTokens(LocalDateTime now);
 
   /**
-   * Delete all tokens for a user
+   * Count active tokens for a user
    */
-  void deleteByUserId(Long userId);
+  @Query("SELECT COUNT(rt) FROM RefreshToken rt WHERE rt.ownerId = :ownerId " +
+    "AND rt.ownerType = :ownerType " +
+    "AND rt.isRevoked = false " +
+    "AND rt.expiryDate > :now")
+  Long countActiveTokens(Long ownerId, Role ownerType, LocalDateTime now);
 }
