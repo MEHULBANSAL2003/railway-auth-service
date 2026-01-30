@@ -44,7 +44,6 @@ public class JwtService {
     } else if ("USER".equalsIgnoreCase(type)) {
       claims.put("userId", id);
     }
-    claims.put("id", id);
     claims.put("role", role.name());
     return Jwts.builder()
       .setClaims(claims)
@@ -58,9 +57,13 @@ public class JwtService {
   /**
    * Generate refresh token
    */
-  public String generateRefreshToken(Long id, String email, Role role) {
+  public String generateRefreshToken(Long id, String email, Role role, String type) {
     Map<String, Object> claims = new HashMap<>();
-    claims.put("id", id);
+    if ("ADMIN".equalsIgnoreCase(type)) {
+      claims.put("adminId", id);
+    } else if ("USER".equalsIgnoreCase(type)) {
+      claims.put("userId", id);
+    }
     claims.put("role", role.name());
 
     return Jwts.builder()
