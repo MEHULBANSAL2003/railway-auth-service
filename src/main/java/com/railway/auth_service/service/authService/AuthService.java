@@ -11,4 +11,6 @@ import org.springframework.stereotype.Service;
 public interface AuthService {
 
   GoogleAuthResponse googleTokenVerify(GoogleAuthRequest request);
+
+  RefreshTokenResponse refreshAccessToken(RefreshTokenRequest request);
 }

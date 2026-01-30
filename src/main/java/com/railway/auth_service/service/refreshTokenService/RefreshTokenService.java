@@ -194,9 +194,7 @@ public class RefreshTokenService {
           "Invalid refresh token"
         );
       }
-
-      log.debug("Refresh token verified successfully for {}: {}",
-        refreshToken.getOwnerType(), refreshToken.getOwnerId());
+      log.debug("Refresh token verified successfully for {}: {}", refreshToken.getOwnerType(), refreshToken.getOwnerId());
       return refreshToken;
 
     } catch (BaseException e) {

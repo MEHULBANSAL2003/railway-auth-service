@@ -7,7 +7,9 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.railway.auth_service.config.googleOAuthConfig.GoogleOAuthConfig;
 import com.railway.auth_service.dto.request.auth.GoogleAuthRequest;
+import com.railway.auth_service.dto.request.auth.RefreshTokenRequest;
 import com.railway.auth_service.dto.response.auth.GoogleAuthResponse;
+import com.railway.auth_service.dto.response.auth.RefreshTokenResponse;
 import com.railway.auth_service.entity.AdminEntity;
 import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.exception.BaseException;
@@ -29,7 +31,7 @@ import java.util.Collections;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AuthServiceImpl implements AuthService{
+public class AuthServiceImpl implements AuthService {
 
   private final AdminRepository adminRepository;
   private final JwtService jwtService;
@@ -108,12 +110,12 @@ public class AuthServiceImpl implements AuthService{
 
       log.info("Admin login successful for: {}", email);
 
-      String accessToken = jwtService.generateAccessToken(admin.getId(),admin.getEmail(),admin.getAdminRole(), "admin");
+      String accessToken = jwtService.generateAccessToken(admin.getId(), admin.getEmail(), admin.getAdminRole(), "admin");
       RefreshTokenEntity refreshToken = refreshTokenService.createRefreshTokenForAdmin(admin.getId());
 
       return GoogleAuthResponse.builder()
         .accessToken(accessToken)
-       .refreshToken(refreshToken.getRefreshToken())
+        .refreshToken(refreshToken.getRefreshToken())
         .expiresIn(accessTokenExpiryMs / 1000)
         .id(admin.getId())
         .email(admin.getEmail())
@@ -143,5 +145,11 @@ public class AuthServiceImpl implements AuthService{
         "Authentication failed. Please try again."
       );
     }
-  }
+  };
+
+  @Override
+  @Transactional
+  public RefreshTokenResponse refreshAccessToken(RefreshTokenRequest request) {
+    return new RefreshTokenResponse();
+  };
 }
