@@ -32,8 +32,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Table(name = "users",indexes = {
   @Index(name = "idx_email", columnList = "email"),
-  @Index(name = "idx_phone", columnList = "phoneNumber"),
-  @Index(name = "idx_google_id", columnList = "googleId")
+  @Index(name = "idx_phone", columnList = "phone_number"),
+  @Index(name = "idx_user_name", columnList = "user_name")
 })
 public class UserEntity {
   @Id

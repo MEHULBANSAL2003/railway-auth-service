@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "refresh_tokens", indexes = {
-  @Index(name = "idx_token", columnList = "token"),
+  @Index(name = "idx_token", columnList = "refresh_token"),
 })
 public class RefreshTokenEntity {
 

@@ -13,7 +13,7 @@ import java.util.Optional;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity, Long> {
 
-  Optional<RefreshTokenEntity> findByToken(String token);
+  Optional<RefreshTokenEntity> findByRefreshToken(String token);
 
   /**
    * Find all tokens for a user
@@ -23,7 +23,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
   /**
    * Find all valid (non-revoked, non-expired) tokens for a user
    */
-  @Query("SELECT rt FROM RefreshToken rt WHERE rt.ownerId = :ownerId " +
+  @Query("SELECT rt FROM RefreshTokenEntity rt WHERE rt.ownerId = :ownerId " +
     "AND rt.ownerType = :ownerType " +
     "AND rt.isRevoked = false " +
     "AND rt.expiryDate > :now")
@@ -34,7 +34,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
    */
   @Modifying
   @Transactional
-  @Query("UPDATE RefreshToken rt SET rt.isRevoked = true " +
+  @Query("UPDATE RefreshTokenEntity rt SET rt.isRevoked = true " +
     "WHERE rt.ownerId = :ownerId AND rt.ownerType = :ownerType")
   void revokeAllTokens(Long ownerId, Role ownerType);
 
@@ -43,13 +43,13 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
    */
   @Modifying
   @Transactional
-  @Query("DELETE FROM RefreshToken rt WHERE rt.isRevoked = true OR rt.expiryDate < :now")
+  @Query("DELETE FROM RefreshTokenEntity rt WHERE rt.isRevoked = true OR rt.expiryDate < :now")
   void deleteExpiredAndRevokedTokens(LocalDateTime now);
 
   /**
    * Count active tokens for a user
    */
-  @Query("SELECT COUNT(rt) FROM RefreshToken rt WHERE rt.ownerId = :ownerId " +
+  @Query("SELECT COUNT(rt) FROM RefreshTokenEntity rt WHERE rt.ownerId = :ownerId " +
     "AND rt.ownerType = :ownerType " +
     "AND rt.isRevoked = false " +
     "AND rt.expiryDate > :now")
