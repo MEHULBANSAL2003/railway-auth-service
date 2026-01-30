@@ -12,7 +12,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,12 +32,12 @@ public class AuthController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-  @PostMapping(ApiConstants.REFRESH_ACCESS_TOKEN)
-  public ResponseEntity<ApiResponse<RefreshTokenResponse>> generateNewAccessToken(@Valid @RequestBody RefreshTokenRequest request){
-    log.info("Refresh token request received");
-    RefreshTokenResponse response = authServiceImpl.refreshAccessToken(request);
-    return ResponseEntity.ok(ApiResponse.success(response));
-  }
+//  @PostMapping(ApiConstants.REFRESH_ACCESS_TOKEN)
+//  public ResponseEntity<ApiResponse<RefreshTokenResponse>> generateNewAccessToken(@Valid @RequestBody RefreshTokenRequest request){
+//    log.info("Refresh token request received");
+//    RefreshTokenResponse response = authServiceImpl.refreshAccessToken(request);
+//    return ResponseEntity.ok(ApiResponse.success(response));
+//  }
 
 
 }

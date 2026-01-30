@@ -4,7 +4,6 @@ import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.entity.UserEntity;
 import com.railway.auth_service.exception.BaseException;
 import com.railway.auth_service.repository.RefreshTokenRepository;
-import com.railway.auth_service.repository.UserAdminRepository;
 import com.railway.auth_service.service.jwtService.JwtService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
