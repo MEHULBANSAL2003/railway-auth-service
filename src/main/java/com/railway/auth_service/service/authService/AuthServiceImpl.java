@@ -9,9 +9,11 @@ import com.railway.auth_service.config.googleOAuthConfig.GoogleOAuthConfig;
 import com.railway.auth_service.dto.request.auth.GoogleAuthRequest;
 import com.railway.auth_service.dto.response.auth.GoogleAuthResponse;
 import com.railway.auth_service.entity.AdminEntity;
+import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.exception.BaseException;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.service.jwtService.JwtService;
+import com.railway.auth_service.service.refreshTokenService.RefreshTokenService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,7 @@ public class AuthServiceImpl implements AuthService{
 
   private final AdminRepository adminRepository;
   private final JwtService jwtService;
+  private final RefreshTokenService refreshTokenService;
   private final GoogleOAuthConfig googleConfig;
 
   @Value("${jwt.access-token.expiry-ms}")
@@ -106,10 +109,11 @@ public class AuthServiceImpl implements AuthService{
       log.info("Admin login successful for: {}", email);
 
       String accessToken = jwtService.generateAccessToken(admin.getId(),admin.getEmail(),admin.getAdminRole(), "admin");
+      RefreshTokenEntity refreshToken = refreshTokenService.createRefreshTokenForAdmin(admin.getId());
 
       return GoogleAuthResponse.builder()
         .accessToken(accessToken)
-       .refreshToken("jnvfdkjvfkdjvnfkd")
+       .refreshToken(refreshToken.getRefreshToken())
         .expiresIn(accessTokenExpiryMs / 1000)
         .id(admin.getId())
         .email(admin.getEmail())

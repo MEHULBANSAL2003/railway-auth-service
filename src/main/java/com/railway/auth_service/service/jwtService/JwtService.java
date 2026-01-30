@@ -58,13 +58,14 @@ public class JwtService {
   /**
    * Generate refresh token
    */
-  public String generateRefreshToken(UserEntity user) {
+  public String generateRefreshToken(Long id, String email, Role role) {
     Map<String, Object> claims = new HashMap<>();
-    claims.put("id", user.getId());
+    claims.put("id", id);
+    claims.put("role", role.name());
 
     return Jwts.builder()
       .setClaims(claims)
-      .setSubject(user.getEmail())
+      .setSubject(email)
       .setIssuedAt(new Date())
       .setExpiration(new Date(System.currentTimeMillis() + refreshTokenExpiry))
       .signWith(getSigningKey(), SignatureAlgorithm.HS256)
