@@ -7,16 +7,11 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.railway.auth_service.config.googleOAuthConfig.GoogleOAuthConfig;
 import com.railway.auth_service.dto.request.auth.GoogleAuthRequest;
-import com.railway.auth_service.dto.request.auth.RefreshTokenRequest;
 import com.railway.auth_service.dto.response.auth.GoogleAuthResponse;
-import com.railway.auth_service.dto.response.auth.RefreshTokenResponse;
 import com.railway.auth_service.entity.AdminEntity;
-import com.railway.auth_service.entity.RefreshTokenEntity;
-import com.railway.auth_service.entity.UserEntity;
 import com.railway.auth_service.exception.BaseException;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.service.jwtService.JwtService;
-import com.railway.auth_service.service.refreshTokenService.RefreshTokenService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +32,6 @@ public class AuthServiceImpl implements AuthService{
   private final AdminRepository adminRepository;
   private final JwtService jwtService;
   private final GoogleOAuthConfig googleConfig;
-  private final RefreshTokenService refreshTokenService;
 
   @Value("${jwt.access-token.expiry-ms}")
   private Long accessTokenExpiryMs;
@@ -112,7 +106,6 @@ public class AuthServiceImpl implements AuthService{
       log.info("Admin login successful for: {}", email);
 
       String accessToken = jwtService.generateAccessToken(admin.getId(),admin.getEmail(),admin.getAdminRole(), "admin");
-//      RefreshTokenEntity refreshTokenEntity = refreshTokenService.createRefreshToken(admin.getId(), admin.getAdminRole());
 
       return GoogleAuthResponse.builder()
         .accessToken(accessToken)
@@ -147,50 +140,4 @@ public class AuthServiceImpl implements AuthService{
       );
     }
   }
-
-//  @Override
-//  @Transactional
-//  public RefreshTokenResponse refreshAccessToken(RefreshTokenRequest request) {
-//    log.info("Refreshing access token");
-//
-//    try {
-//      // Verify refresh token
-//      RefreshTokenEntity refreshToken = refreshTokenService.verifyRefreshToken(
-//        request.getRefreshToken()
-//      );
-//
-//      // Get user
-//      UserEntity user = userAdminRepository.findById(refreshToken.getUserId())
-//        .orElseThrow(() -> new BaseException(HttpStatus.FORBIDDEN,"USER_NOT_FOUND","No user found"));
-//
-//      // Check if user is still active
-//      if (!user.getIsActive()) {
-//        throw new BaseException( HttpStatus.FORBIDDEN,
-//          "ACCOUNT_DEACTIVATED",
-//          "Your account has been deactivated. Please contact support.");
-//      }
-//
-//      // Generate new access token
-//      String newAccessToken = jwtService.generateAccessToken(user);
-//
-//      // Rotate refresh token (best practice)
-//      RefreshTokenEntity newRefreshToken = refreshTokenService.rotateRefreshToken(
-//        request.getRefreshToken()
-//      );
-//
-//      log.info("Access token refreshed for user: {}", user.getEmail());
-//
-//      // Build response
-//      return RefreshTokenResponse.builder()
-//        .accessToken(newAccessToken)
-//        .refreshToken(newRefreshToken.getToken())
-//        .userId(user.getId())
-//        .email(user.getEmail())
-//        .build();
-//
-//    } catch (BaseException e) {
-//      log.error("Failed to refresh access token", e);
-//      throw e;
-//    }
-//  }
 }
