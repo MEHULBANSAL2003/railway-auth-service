@@ -25,5 +25,12 @@ public class ApiConstants {
   public static final String ADMIN_DELETE = "/admin/delete/{id}";
 
 
+
+  public static final String TEST_1 = "/hello";
+  public static final String TEST_2 = "/hello2";
+  public static final String TEST_3 = "/hello3";
+
+
+
 }
 
