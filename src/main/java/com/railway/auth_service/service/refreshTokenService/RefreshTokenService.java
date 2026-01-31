@@ -48,7 +48,7 @@ public class RefreshTokenService {
         ));
 
       // Generate JWT refresh token for USER
-      String tokenString = jwtService.generateRefreshToken(userId, user.getEmail(), Role.USER, "USER");
+      String tokenString = jwtService.generateRefreshToken(userId, user.getEmail(), Role.USER);
 
       // Calculate expiry date
       LocalDateTime expiryDate = LocalDateTime.now()
@@ -106,7 +106,7 @@ public class RefreshTokenService {
       Role role = admin.getAdminRole();
 
       // Generate JWT refresh token for ADMIN
-      String tokenString = jwtService.generateRefreshToken(adminId, admin.getEmail(), role, "ADMIN");
+      String tokenString = jwtService.generateRefreshToken(adminId, admin.getEmail(), role);
 
       // Calculate expiry date
       LocalDateTime expiryDate = LocalDateTime.now()

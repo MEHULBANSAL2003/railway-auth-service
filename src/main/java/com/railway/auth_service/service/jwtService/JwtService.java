@@ -1,7 +1,5 @@
-// service/JwtService.java
 package com.railway.auth_service.service.jwtService;
 
-import com.railway.auth_service.entity.UserEntity;
 import com.railway.auth_service.enums.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -33,18 +31,18 @@ public class JwtService {
     return Keys.hmacShaKeyFor(secret.getBytes());
   }
 
+  // ============ ACCESS TOKEN GENERATION ============
+
   /**
-   * Generate access token with user claims
-   * Payload includes: userId, email, role (ROLE_ADMIN/ROLE_USER)
+   * Generate access token for USER
+   * Claims: userId, email, role=USER, type=USER
    */
-  public String generateAccessToken(Long id, String email, Role role,String type) {
+  public String generateAccessTokenForUser(Long userId, String email) {
     Map<String, Object> claims = new HashMap<>();
-    if ("ADMIN".equalsIgnoreCase(type)) {
-      claims.put("adminId", id);
-    } else if ("USER".equalsIgnoreCase(type)) {
-      claims.put("userId", id);
-    }
-    claims.put("role", role.name());
+    claims.put("userId", userId);
+    claims.put("role", Role.USER.name());
+    claims.put("type", "USER");
+
     return Jwts.builder()
       .setClaims(claims)
       .setSubject(email)
@@ -55,16 +53,34 @@ public class JwtService {
   }
 
   /**
-   * Generate refresh token
+   * Generate access token for ADMIN
+   * Claims: adminId, email, role=ADMIN/SUPER_ADMIN, type=ADMIN
    */
-  public String generateRefreshToken(Long id, String email, Role role, String type) {
+  public String generateAccessTokenForAdmin(Long adminId, String email, Role adminRole) {
     Map<String, Object> claims = new HashMap<>();
-    if ("ADMIN".equalsIgnoreCase(type)) {
-      claims.put("adminId", id);
-    } else if ("USER".equalsIgnoreCase(type)) {
-      claims.put("userId", id);
-    }
-    claims.put("role", role.name());
+    claims.put("adminId", adminId);
+    claims.put("role", adminRole.name());
+    claims.put("type", "ADMIN");
+
+    return Jwts.builder()
+      .setClaims(claims)
+      .setSubject(email)
+      .setIssuedAt(new Date())
+      .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiry))
+      .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+      .compact();
+  }
+
+  // ============ REFRESH TOKEN GENERATION ============
+
+  /**
+   * Generate refresh token (works for both USER and ADMIN)
+   * Claims: ownerId, ownerType (USER/ADMIN/SUPER_ADMIN), email
+   */
+  public String generateRefreshToken(Long ownerId, String email, Role ownerType) {
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("ownerId", ownerId);
+    claims.put("ownerType", ownerType.name());
 
     return Jwts.builder()
       .setClaims(claims)
@@ -74,6 +90,8 @@ public class JwtService {
       .signWith(getSigningKey(), SignatureAlgorithm.HS256)
       .compact();
   }
+
+  // ============ TOKEN VALIDATION ============
 
   /**
    * Validate and extract claims from token
@@ -86,14 +104,63 @@ public class JwtService {
       .getBody();
   }
 
-  public Long id(String token) {
-    return validateToken(token).get("id", Long.class);
+  // ============ CLAIM EXTRACTION ============
+
+  /**
+   * Extract owner ID from refresh token
+   */
+  public Long extractOwnerId(String token) {
+    return validateToken(token).get("ownerId", Long.class);
+  }
+
+  /**
+   * Extract owner type from refresh token
+   */
+  public Role extractOwnerType(String token) {
+    String type = validateToken(token).get("ownerType", String.class);
+    return Role.valueOf(type);
+  }
+
+  /**
+   * Extract user ID from access token
+   */
+  public Long extractUserId(String token) {
+    return validateToken(token).get("userId", Long.class);
+  }
+
+  /**
+   * Extract admin ID from access token
+   */
+  public Long extractAdminId(String token) {
+    return validateToken(token).get("adminId", Long.class);
   }
 
   /**
    * Extract role from token
    */
-  public String extractRole(String token) {
-    return validateToken(token).get("role", String.class);
+  public Role extractRole(String token) {
+    String role = validateToken(token).get("role", String.class);
+    return Role.valueOf(role);
+  }
+
+  /**
+   * Extract type from access token (USER or ADMIN)
+   */
+  public String extractType(String token) {
+    return validateToken(token).get("type", String.class);
+  }
+
+  /**
+   * Extract email (subject) from token
+   */
+  public String extractEmail(String token) {
+    return validateToken(token).getSubject();
+  }
+
+  /**
+   * Check if token is expired
+   */
+  public boolean isTokenExpired(String token) {
+    return validateToken(token).getExpiration().before(new Date());
   }
 }
