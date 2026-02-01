@@ -52,8 +52,7 @@ public class AdminEntity {
   @Column(name = "profile_picture_url", length = 500)
   private String profilePictureUrl;
 
-  @Column(name = "google_id", unique = true, nullable = false, length = 255)
-  @NotBlank(message = "Google ID is required")
+  @Column(name = "google_id", unique = true, length = 255)
   private String googleId;
 
   @Enumerated(EnumType.STRING)

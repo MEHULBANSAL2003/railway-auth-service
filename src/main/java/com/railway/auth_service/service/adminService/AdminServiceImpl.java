@@ -1,9 +1,12 @@
 package com.railway.auth_service.service.adminService;
 
 
+import com.railway.auth_service.dto.request.admin.CreateAdminRequest;
 import com.railway.auth_service.dto.request.admin.LogoutCurrentDeviceRequest;
+import com.railway.auth_service.dto.response.admin.CreateAdminResponse;
 import com.railway.auth_service.dto.response.admin.LogoutAllDeviceResponse;
 import com.railway.auth_service.dto.response.admin.LogoutCurrentDeviceResponse;
+import com.railway.auth_service.entity.AdminEntity;
 import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.enums.Role;
 import com.railway.auth_service.exception.BaseException;
@@ -116,6 +119,34 @@ public class AdminServiceImpl implements AdminService{
 
     log.info("=== Logout All Devices Completed Successfully ===");
     return response;
+  }
+
+  @Override
+  public CreateAdminResponse createNewAdmin(CreateAdminRequest request) {
+
+    String email = request.getEmail();
+    if(adminRepository.existsByEmail(email)){
+      throw new BaseException(HttpStatus.BAD_REQUEST, "ADMIN_ALREADY_EXISTS", "Admin with email already exists");
+    }
+
+    AdminEntity adminEntity = AdminEntity.builder()
+      .adminRole(Role.ADMIN)
+      .department(request.getDepartment())
+      .email(request.getEmail())
+      .fullName(request.getFullName())
+      .phoneNumber(request.getPhoneNumber())
+      .createdBy(SecurityUtils.getCurrentAdminId())
+      .build();
+
+    AdminEntity adminData = adminRepository.save(adminEntity);
+    log.info("Admin created successfully: {}", email);
+
+    return CreateAdminResponse.builder()
+      .email(adminData.getEmail())
+      .id(adminData.getId())
+      .name(adminData.getFullName())
+      .department(adminData.getDepartment())
+      .build();
   }
 
 }

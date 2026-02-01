@@ -2,7 +2,9 @@ package com.railway.auth_service.controller;
 
 
 import com.railway.auth_service.constants.ApiConstants;
+import com.railway.auth_service.dto.request.admin.CreateAdminRequest;
 import com.railway.auth_service.dto.request.admin.LogoutCurrentDeviceRequest;
+import com.railway.auth_service.dto.response.admin.CreateAdminResponse;
 import com.railway.auth_service.dto.response.admin.LogoutAllDeviceResponse;
 import com.railway.auth_service.dto.response.admin.LogoutCurrentDeviceResponse;
 import com.railway.auth_service.exception.ApiResponse;
@@ -39,6 +41,13 @@ public class AdminController {
    LogoutAllDeviceResponse response = adminService.logoutAllDevices();
    return ResponseEntity.ok(ApiResponse.success(response));
 
-
  }
+
+ @PostMapping(ApiConstants.CREATE_NEW_ADMIN)
+  public ResponseEntity<ApiResponse<CreateAdminResponse>> createNewAdmin(CreateAdminRequest request) {
+   log.info("Create new admin request received");
+   CreateAdminResponse response = adminService.createNewAdmin(request);
+   return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
 }
