@@ -1,4 +1,4 @@
-package com.railway.auth_service.dto.request.user;
+package com.railway.auth_service.dto.request.admin;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

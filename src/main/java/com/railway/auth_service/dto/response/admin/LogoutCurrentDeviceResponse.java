@@ -1,4 +1,4 @@
-package com.railway.auth_service.dto.response.user;
+package com.railway.auth_service.dto.response.admin;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;

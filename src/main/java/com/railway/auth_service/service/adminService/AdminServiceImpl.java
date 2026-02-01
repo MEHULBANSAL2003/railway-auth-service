@@ -1,9 +1,9 @@
 package com.railway.auth_service.service.adminService;
 
 
-import com.railway.auth_service.dto.request.user.LogoutCurrentDeviceRequest;
-import com.railway.auth_service.dto.response.user.LogoutAllDeviceResponse;
-import com.railway.auth_service.dto.response.user.LogoutCurrentDeviceResponse;
+import com.railway.auth_service.dto.request.admin.LogoutCurrentDeviceRequest;
+import com.railway.auth_service.dto.response.admin.LogoutAllDeviceResponse;
+import com.railway.auth_service.dto.response.admin.LogoutCurrentDeviceResponse;
 import com.railway.auth_service.entity.RefreshTokenEntity;
 import com.railway.auth_service.enums.Role;
 import com.railway.auth_service.exception.BaseException;
