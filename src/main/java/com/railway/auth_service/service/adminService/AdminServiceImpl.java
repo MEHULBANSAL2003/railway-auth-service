@@ -124,13 +124,11 @@ public class AdminServiceImpl implements AdminService{
   @Override
   public CreateAdminResponse createNewAdmin(CreateAdminRequest request) {
 
-    String email = request.getEmail();
-    if(adminRepository.existsByEmail(email)){
-      throw new BaseException(HttpStatus.BAD_REQUEST, "ADMIN_ALREADY_EXISTS", "Admin with email already exists");
+    if(adminRepository.existsByEmailOrPhone(request.getEmail(), request.getPhoneNumber())){
+      throw new BaseException(HttpStatus.CONFLICT, "ADMIN_ALREADY_EXISTS", "Admin with email already exists");
     }
 
     AdminEntity adminEntity = AdminEntity.builder()
-      .adminRole(Role.ADMIN)
       .department(request.getDepartment())
       .email(request.getEmail())
       .fullName(request.getFullName())
@@ -140,7 +138,7 @@ public class AdminServiceImpl implements AdminService{
       .build();
 
     AdminEntity adminData = adminRepository.save(adminEntity);
-    log.info("Admin created successfully: {}", email);
+    log.info("Admin created successfully: {}", request.getEmail());
 
     return CreateAdminResponse.builder()
       .email(adminData.getEmail())

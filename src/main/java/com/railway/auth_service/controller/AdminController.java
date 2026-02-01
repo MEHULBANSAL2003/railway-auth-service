@@ -46,7 +46,7 @@ public class AdminController {
 
  @PostMapping(ApiConstants.CREATE_NEW_ADMIN)
  @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<CreateAdminResponse>> createNewAdmin(CreateAdminRequest request) {
+  public ResponseEntity<ApiResponse<CreateAdminResponse>> createNewAdmin(@Valid @RequestBody CreateAdminRequest request) {
    log.info("Create new admin request received");
    CreateAdminResponse response = adminService.createNewAdmin(request);
    return ResponseEntity.ok(ApiResponse.success(response));
