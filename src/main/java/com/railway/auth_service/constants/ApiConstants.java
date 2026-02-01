@@ -13,8 +13,8 @@ public class ApiConstants {
   public static final String REFRESH_ACCESS_TOKEN = "/refresh/access/token";
   public static final String VALIDATE_TOKEN = "/validate/token";
 
-  public static final String LOGOUT_CURRENT_DEVICE = "/logout";
-  public static final String LOGOUT_ALL_DEVICES = "logout/all/devices";
+  public static final String LOGOUT_CURRENT_DEVICE = "/admin/logout";
+  public static final String LOGOUT_ALL_DEVICES = "/admin/logout/all/devices";
 
   public static final String ADMIN_PROFILE_GET = "/admin/profile";
 

@@ -2,66 +2,48 @@ package com.railway.auth_service.controller;
 
 
 import com.railway.auth_service.constants.ApiConstants;
+import com.railway.auth_service.dto.request.user.LogoutCurrentDeviceRequest;
+import com.railway.auth_service.dto.response.user.LogoutAllDeviceResponse;
+import com.railway.auth_service.dto.response.user.LogoutCurrentDeviceResponse;
 import com.railway.auth_service.dto.response.user.SecurityDebugResponse;
+import com.railway.auth_service.exception.ApiResponse;
+import com.railway.auth_service.service.adminService.AdminServiceImpl;
 import com.railway.auth_service.utils.SecurityUtils;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
 @RequestMapping(ApiConstants.API_BASE)
+@RequiredArgsConstructor
 public class AdminController {
 
-  @GetMapping(ApiConstants.TEST_1)
-  public ResponseEntity<SecurityDebugResponse> hello(){
+  private final AdminServiceImpl adminService;
 
-    SecurityDebugResponse response = SecurityDebugResponse.builder()
-      .adminId(SecurityUtils.getCurrentAdminId())
-      .userId(SecurityUtils.getCurrentUserId())
-      .id(SecurityUtils.getCurrentId())
-      .isAdmin(SecurityUtils.isAdmin())
-      .authorities(SecurityUtils.getCurrentAuthorities())
-      .role(SecurityUtils.getCurrentRole())
-      .isAuthenticated(SecurityUtils.isAuthenticated())
-      .build();
+ @PostMapping(ApiConstants.LOGOUT_CURRENT_DEVICE)
+  public ResponseEntity<ApiResponse<LogoutCurrentDeviceResponse>> logoutCurrentDevice(@Valid @RequestBody LogoutCurrentDeviceRequest request) {
+   log.info("Logout current device request received");
+   LogoutCurrentDeviceResponse response = adminService.logoutCurrentDevice(request);
+   return ResponseEntity.ok(ApiResponse.success(response));
 
-    return ResponseEntity.ok(response);
-  }
+ }
 
 
-  @GetMapping(ApiConstants.TEST_2)
-  @PreAuthorize("hasRole('ADMIN')")
-  public ResponseEntity<SecurityDebugResponse> hello2(){
-    SecurityDebugResponse response = SecurityDebugResponse.builder()
-      .adminId(SecurityUtils.getCurrentAdminId())
-      .userId(SecurityUtils.getCurrentUserId())
-      .id(SecurityUtils.getCurrentId())
-      .isAdmin(SecurityUtils.isAdmin())
-      .authorities(SecurityUtils.getCurrentAuthorities())
-      .role(SecurityUtils.getCurrentRole())
-      .isAuthenticated(SecurityUtils.isAuthenticated())
-      .build();
+ @PostMapping(ApiConstants.LOGOUT_ALL_DEVICES)
+  public ResponseEntity<ApiResponse<LogoutAllDeviceResponse>> logoutAllDevices() {
+   log.info("Logout all devices request received");
+   LogoutAllDeviceResponse response = adminService.logoutAllDevices();
+   return ResponseEntity.ok(ApiResponse.success(response));
 
-    return ResponseEntity.ok(response);
-  }
 
-  @GetMapping(ApiConstants.TEST_3)
-  @PreAuthorize("hasRole('USER')")
-  public ResponseEntity<SecurityDebugResponse> hello3(){
-    SecurityDebugResponse response = SecurityDebugResponse.builder()
-      .adminId(SecurityUtils.getCurrentAdminId())
-      .userId(SecurityUtils.getCurrentUserId())
-      .id(SecurityUtils.getCurrentId())
-      .isAdmin(SecurityUtils.isAdmin())
-      .authorities(SecurityUtils.getCurrentAuthorities())
-      .role(SecurityUtils.getCurrentRole())
-      .isAuthenticated(SecurityUtils.isAuthenticated())
-      .build();
-
-    return ResponseEntity.ok(response);
-  }
+ }
 }
