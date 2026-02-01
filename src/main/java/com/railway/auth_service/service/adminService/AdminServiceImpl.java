@@ -134,6 +134,7 @@ public class AdminServiceImpl implements AdminService{
       .department(request.getDepartment())
       .email(request.getEmail())
       .fullName(request.getFullName())
+      .adminRole(request.getRole())
       .phoneNumber(request.getPhoneNumber())
       .createdBy(SecurityUtils.getCurrentAdminId())
       .build();
@@ -146,6 +147,8 @@ public class AdminServiceImpl implements AdminService{
       .id(adminData.getId())
       .name(adminData.getFullName())
       .department(adminData.getDepartment())
+      .adminRole(adminData.getAdminRole())
+      .createdAt(adminData.getCreatedAt())
       .build();
   }
 

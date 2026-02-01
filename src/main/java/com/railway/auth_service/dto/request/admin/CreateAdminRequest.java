@@ -1,6 +1,7 @@
 package com.railway.auth_service.dto.request.admin;
 
 import com.railway.auth_service.enums.Department;
+import com.railway.auth_service.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -25,6 +26,8 @@ public class CreateAdminRequest {
 
  @NotBlank(message = "Phone number is required")
  private String phoneNumber;
+
+ private Role role;
 
  private Department department;
 
