@@ -124,6 +124,7 @@ public class AdminServiceImpl implements AdminService{
   }
 
   @Override
+  @Transactional
   public CreateAdminResponse createNewAdmin(CreateAdminRequest request) {
 
     if(adminRepository.existsByEmailOrPhone(request.getEmail(), request.getPhoneNumber())){
