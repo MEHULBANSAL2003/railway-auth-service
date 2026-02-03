@@ -1,10 +1,12 @@
 package com.railway.auth_service.config.securityConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.railway.auth_service.constants.ApiConstants;
-import com.railway.auth_service.exception.ApiError;
-import com.railway.auth_service.exception.ApiErrorResponse;
-import com.railway.auth_service.filter.JwtAuthenticationEntryPoint;
-import com.railway.auth_service.filter.JwtAuthenticationFilter;
+
+import com.railway.common.exceptions.ApiError;
+import com.railway.common.exceptions.ApiErrorResponse;
+import com.railway.common.security.JwtAuthenticationEntryPoint;
+import com.railway.common.security.JwtAuthenticationFilter;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;

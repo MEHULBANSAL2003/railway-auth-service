@@ -2,7 +2,7 @@ package com.railway.auth_service.entity;
 
 
 import com.railway.auth_service.enums.Department;
-import com.railway.auth_service.enums.Role;
+import com.railway.common.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

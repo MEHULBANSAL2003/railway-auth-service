@@ -1,7 +1,7 @@
 package com.railway.auth_service.dto.response.auth;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.railway.auth_service.enums.Role;
+import com.railway.common.enums.Role;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

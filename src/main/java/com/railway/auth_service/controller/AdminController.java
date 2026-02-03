@@ -7,7 +7,7 @@ import com.railway.auth_service.dto.request.admin.LogoutCurrentDeviceRequest;
 import com.railway.auth_service.dto.response.admin.CreateAdminResponse;
 import com.railway.auth_service.dto.response.admin.LogoutAllDeviceResponse;
 import com.railway.auth_service.dto.response.admin.LogoutCurrentDeviceResponse;
-import com.railway.auth_service.exception.ApiResponse;
+import com.railway.common.exceptions.ApiResponse;
 import com.railway.auth_service.service.adminService.AdminServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

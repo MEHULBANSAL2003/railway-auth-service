@@ -2,7 +2,7 @@ package com.railway.auth_service.dto.response.admin;
 
 
 import com.railway.auth_service.enums.Department;
-import com.railway.auth_service.enums.Role;
+import com.railway.common.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

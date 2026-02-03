@@ -1,7 +1,8 @@
 package com.railway.auth_service.repository;
 
 import com.railway.auth_service.entity.RefreshTokenEntity;
-import com.railway.auth_service.enums.Role;
+import com.railway.common.enums.Role;
+
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

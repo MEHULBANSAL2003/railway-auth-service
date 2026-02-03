@@ -6,7 +6,7 @@ import com.railway.auth_service.dto.request.auth.GoogleAuthRequest;
 import com.railway.auth_service.dto.request.auth.RefreshTokenRequest;
 import com.railway.auth_service.dto.response.auth.GoogleAuthResponse;
 import com.railway.auth_service.dto.response.auth.RefreshTokenResponse;
-import com.railway.auth_service.exception.ApiResponse;
+import com.railway.common.exceptions.ApiResponse;
 import com.railway.auth_service.service.authService.AuthServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
 package com.railway.auth_service.dto.request.admin;
 
 import com.railway.auth_service.enums.Department;
-import com.railway.auth_service.enums.Role;
+import com.railway.common.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

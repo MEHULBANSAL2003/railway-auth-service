@@ -4,7 +4,7 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
-    import: optional:file:${HOME}/Sites/railways/railway-secrets/auth-secrets/auth-${spring.profiles.active}.properties
+    import: optional:file:${HOME}/Sites/railways/railway-backend/railway-secrets/auth-secrets/auth-${spring.profiles.active}.properties
 
 server:
   port: 8080

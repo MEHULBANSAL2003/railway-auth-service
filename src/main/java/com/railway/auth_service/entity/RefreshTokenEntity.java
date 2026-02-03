@@ -1,7 +1,7 @@
 package com.railway.auth_service.entity;
 
-import com.railway.auth_service.enums.Role;
-import com.railway.auth_service.enums.Role;
+import com.railway.common.enums.Role;
+import com.railway.common.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
