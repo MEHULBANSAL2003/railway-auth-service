@@ -12,6 +12,7 @@ import com.railway.common.enums.Role;
 import com.railway.common.exceptions.BaseException;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.service.refreshTokenService.RefreshTokenService;
+import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.List;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Loggable
 public class AdminServiceImpl implements AdminService{
 
   private final AdminRepository adminRepository;

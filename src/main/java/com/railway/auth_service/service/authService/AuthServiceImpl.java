@@ -17,6 +17,7 @@ import com.railway.common.enums.Role;
 import com.railway.common.exceptions.BaseException;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.repository.UserRepository;
+import com.railway.common.logging.Loggable;
 import com.railway.common.security.JwtService;
 import com.railway.auth_service.service.refreshTokenService.RefreshTokenService;
 import jakarta.transaction.Transactional;
@@ -34,6 +35,7 @@ import java.util.Collections;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Loggable
 public class AuthServiceImpl implements AuthService {
 
   private final AdminRepository adminRepository;
@@ -48,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   @Transactional
+  @Loggable
   public GoogleAuthResponse googleTokenVerify(GoogleAuthRequest request) {
     log.info("Starting Google admin authentication");
     try {

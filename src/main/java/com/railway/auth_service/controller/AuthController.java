@@ -8,6 +8,7 @@ import com.railway.auth_service.dto.response.auth.GoogleAuthResponse;
 import com.railway.auth_service.dto.response.auth.RefreshTokenResponse;
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.auth_service.service.authService.AuthServiceImpl;
+import com.railway.common.logging.Loggable;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(ApiConstants.AUTH_BASE)
 @RequiredArgsConstructor
+@Loggable
 public class AuthController {
 
   private final AuthServiceImpl authServiceImpl;

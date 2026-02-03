@@ -1,235 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-  <!--
-    INCLUDE SPRING BOOT DEFAULTS
-  -->
-  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
-
-  <!--
-    BASE PROPERTIES
-  -->
+  <!-- Set service-specific APP_NAME -->
   <property name="APP_NAME" value="railway-auth-service"/>
 
-  <!-- Base log directory (can be overridden by environment variable) -->
-  <property name="LOG_BASE" value="${LOG_BASE:-logs}"/>
+  <!-- Include common logging configuration -->
+  <include resource="logback-common.xml"/>
 
-  <!-- ========================================== -->
-  <!-- CONSOLE APPENDER (Development) -->
-  <!-- ========================================== -->
-  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-    <encoder>
-      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %cyan(%logger{40}) - %msg%n</pattern>
-      <charset>UTF-8</charset>
-    </encoder>
-  </appender>
-
-  <!-- ========================================== -->
-  <!-- DEVELOPMENT PROFILE - logs/dev/ directory -->
-  <!-- ========================================== -->
+  <!-- Service-specific logger overrides (optional) -->
   <springProfile name="dev,local">
-    <!-- Set log path for dev -->
-    <property name="LOG_PATH" value="${LOG_BASE}/dev"/>
-
-    <!-- FILE APPENDER (All Logs) -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-      <file>${LOG_PATH}/${APP_NAME}.log</file>
-      <encoder>
-        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n</pattern>
-        <charset>UTF-8</charset>
-      </encoder>
-      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-        <maxFileSize>100MB</maxFileSize>
-        <maxHistory>7</maxHistory>
-        <totalSizeCap>1GB</totalSizeCap>
-        <cleanHistoryOnStart>true</cleanHistoryOnStart>
-      </rollingPolicy>
-    </appender>
-
-    <!-- ERROR FILE APPENDER -->
-    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-      <file>${LOG_PATH}/${APP_NAME}-error.log</file>
-      <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-        <level>ERROR</level>
-      </filter>
-      <encoder>
-        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n%ex{full}</pattern>
-        <charset>UTF-8</charset>
-      </encoder>
-      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-        <maxFileSize>50MB</maxFileSize>
-        <maxHistory>7</maxHistory>
-        <totalSizeCap>500MB</totalSizeCap>
-      </rollingPolicy>
-    </appender>
-
-    <!-- ROOT LOGGER for DEV -->
-    <root level="INFO">
-      <appender-ref ref="CONSOLE"/>
-      <appender-ref ref="FILE"/>
-    </root>
-
-    <!-- Your application packages -->
     <logger name="com.railway.auth_service" level="DEBUG" additivity="false">
       <appender-ref ref="CONSOLE"/>
       <appender-ref ref="FILE"/>
     </logger>
-
-    <!-- Spring framework -->
-    <logger name="org.springframework.web" level="DEBUG" additivity="false">
-      <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <!-- Database SQL queries -->
-    <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
-      <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <!-- SQL parameters -->
-    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
-      <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <!-- Transaction management -->
-    <logger name="org.springframework.transaction" level="DEBUG" additivity="false">
-      <appender-ref ref="CONSOLE"/>
-    </logger>
   </springProfile>
 
-  <!-- ========================================== -->
-  <!-- PRODUCTION PROFILE - logs/prod/ directory -->
-  <!-- ========================================== -->
   <springProfile name="prod">
-    <!-- Set log path for prod -->
-    <property name="LOG_PATH" value="${LOG_BASE}/prod"/>
-
-    <!-- FILE APPENDER (All Logs) -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-      <file>${LOG_PATH}/${APP_NAME}.log</file>
-      <encoder>
-        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n</pattern>
-        <charset>UTF-8</charset>
-      </encoder>
-      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-        <maxFileSize>100MB</maxFileSize>
-        <maxHistory>30</maxHistory>
-        <totalSizeCap>3GB</totalSizeCap>
-        <cleanHistoryOnStart>true</cleanHistoryOnStart>
-      </rollingPolicy>
-    </appender>
-
-    <!-- ERROR FILE APPENDER -->
-    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-      <file>${LOG_PATH}/${APP_NAME}-error.log</file>
-      <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-        <level>ERROR</level>
-      </filter>
-      <encoder>
-        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40} - %msg%n%ex{full}</pattern>
-        <charset>UTF-8</charset>
-      </encoder>
-      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-        <maxFileSize>50MB</maxFileSize>
-        <maxHistory>60</maxHistory>
-        <totalSizeCap>1GB</totalSizeCap>
-      </rollingPolicy>
-    </appender>
-
-    <!-- JSON APPENDER (for Loki/ELK) -->
-    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-      <file>${LOG_PATH}/${APP_NAME}-json.log</file>
-      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-        <customFields>{"app":"${APP_NAME}","environment":"prod"}</customFields>
-        <includeCallerData>false</includeCallerData>
-        <includeMdcKeyName>traceId</includeMdcKeyName>
-        <includeMdcKeyName>spanId</includeMdcKeyName>
-      </encoder>
-      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-        <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-json-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-        <maxFileSize>100MB</maxFileSize>
-        <maxHistory>30</maxHistory>
-        <totalSizeCap>3GB</totalSizeCap>
-      </rollingPolicy>
-    </appender>
-
-    <!-- ASYNC APPENDERS for performance -->
-    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
-      <appender-ref ref="FILE"/>
-      <queueSize>512</queueSize>
-      <discardingThreshold>0</discardingThreshold>
-      <includeCallerData>false</includeCallerData>
-    </appender>
-
-    <appender name="ASYNC_ERROR" class="ch.qos.logback.classic.AsyncAppender">
-      <appender-ref ref="ERROR_FILE"/>
-      <queueSize>256</queueSize>
-      <discardingThreshold>0</discardingThreshold>
-    </appender>
-
-    <appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
-      <appender-ref ref="JSON_FILE"/>
-      <queueSize>512</queueSize>
-      <discardingThreshold>0</discardingThreshold>
-    </appender>
-
-    <!-- ROOT LOGGER for PROD -->
-    <root level="INFO">
-      <appender-ref ref="ASYNC_FILE"/>
-      <appender-ref ref="ASYNC_ERROR"/>
-      <appender-ref ref="ASYNC_JSON"/>
-    </root>
-
-    <!-- Your application -->
     <logger name="com.railway.auth_service" level="INFO" additivity="false">
       <appender-ref ref="ASYNC_FILE"/>
       <appender-ref ref="ASYNC_ERROR"/>
       <appender-ref ref="ASYNC_JSON"/>
     </logger>
-
-    <!-- Spring framework - only warnings -->
-    <logger name="org.springframework" level="WARN" additivity="false">
-      <appender-ref ref="ASYNC_FILE"/>
-      <appender-ref ref="ASYNC_ERROR"/>
-    </logger>
-
-    <!-- Hibernate - no SQL in prod -->
-    <logger name="org.hibernate" level="WARN" additivity="false">
-      <appender-ref ref="ASYNC_FILE"/>
-      <appender-ref ref="ASYNC_ERROR"/>
-    </logger>
-
-    <!-- Security events - track authentication -->
-    <logger name="org.springframework.security" level="INFO" additivity="false">
-      <appender-ref ref="ASYNC_FILE"/>
-      <appender-ref ref="ASYNC_JSON"/>
-    </logger>
-
-    <!-- Database connection pool -->
-    <logger name="com.zaxxer.hikari" level="INFO" additivity="false">
-      <appender-ref ref="ASYNC_FILE"/>
-    </logger>
   </springProfile>
-
-  <!-- ========================================== -->
-  <!-- TEST PROFILE - logs/test/ directory -->
-  <!-- ========================================== -->
-  <springProfile name="test">
-    <property name="LOG_PATH" value="${LOG_BASE}/test"/>
-
-    <root level="INFO">
-      <appender-ref ref="CONSOLE"/>
-    </root>
-
-    <logger name="com.railway.auth_service" level="DEBUG" additivity="false">
-      <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <!-- Suppress noisy test logs -->
-    <logger name="org.springframework.test" level="WARN"/>
-    <logger name="org.hibernate" level="WARN"/>
-  </springProfile>
-
 </configuration>

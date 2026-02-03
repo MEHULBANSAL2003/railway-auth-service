@@ -8,6 +8,7 @@ import com.railway.common.exceptions.BaseException;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
+import com.railway.common.logging.Loggable;
 import com.railway.common.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Loggable
 public class RefreshTokenService {
 
   private final RefreshTokenRepository refreshTokenRepository;
