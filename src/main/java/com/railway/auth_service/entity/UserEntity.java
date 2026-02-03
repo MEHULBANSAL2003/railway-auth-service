@@ -1,5 +1,5 @@
 package com.railway.auth_service.entity;
-import com.railway.auth_service.enums.AuthProvider;
+import com.railway.common.enums.AuthProvider;
 import com.railway.common.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
