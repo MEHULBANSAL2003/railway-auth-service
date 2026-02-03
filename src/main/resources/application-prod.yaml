@@ -31,6 +31,7 @@ spring:
     show-sql: false       # Never log SQL in production
     properties:
       hibernate:
+        default_schema: railway_auth
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: false
         use_sql_comments: false

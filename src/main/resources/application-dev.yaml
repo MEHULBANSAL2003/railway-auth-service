@@ -30,6 +30,7 @@ spring:
     show-sql: true      # Show SQL in logs
     properties:
       hibernate:
+        default_schema: railway_auth
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         use_sql_comments: true
