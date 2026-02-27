@@ -1,13 +1,20 @@
 package com.railway.auth_service.service.adminService;
 
 
+import com.railway.auth_service.dto.pagination.PagedResponse;
+import com.railway.auth_service.dto.pagination.SortUtil;
+import com.railway.auth_service.dto.request.admin.AdminFilterRequest;
 import com.railway.auth_service.dto.request.admin.CreateAdminRequest;
 import com.railway.auth_service.dto.request.admin.LogoutCurrentDeviceRequest;
+import com.railway.auth_service.dto.response.admin.AdminSummaryResponse;
 import com.railway.auth_service.dto.response.admin.CreateAdminResponse;
 import com.railway.auth_service.dto.response.admin.LogoutAllDeviceResponse;
 import com.railway.auth_service.dto.response.admin.LogoutCurrentDeviceResponse;
+import com.railway.auth_service.dto.response.admin.UpdateAdminStatusResponse;
 import com.railway.auth_service.entity.AdminEntity;
 import com.railway.auth_service.entity.RefreshTokenEntity;
+import com.railway.auth_service.mapper.AdminMapper;
+import com.railway.auth_service.specification.AdminSpecification;
 import com.railway.common.enums.Role;
 import com.railway.common.exceptions.BaseException;
 import com.railway.auth_service.repository.AdminRepository;
@@ -17,11 +24,17 @@ import com.railway.common.security.SecurityUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Slf4j
@@ -31,6 +44,17 @@ public class AdminServiceImpl implements AdminService{
 
   private final AdminRepository adminRepository;
   private final RefreshTokenService refreshTokenService;
+
+  private static final Set<String> SORTABLE_FIELDS = Set.of(
+    "fullName",
+    "email",
+    "phoneNumber",
+    "department",
+    "adminRole",
+    "isActive",
+    "createdAt",
+    "lastLoginAt"
+  );
 
   @Override
   @Transactional
@@ -152,5 +176,101 @@ public class AdminServiceImpl implements AdminService{
       .createdAt(adminData.getCreatedAt())
       .build();
   }
+
+  @Override
+  public PagedResponse<AdminSummaryResponse> getAdminList(AdminFilterRequest filter) {
+    log.info("Fetching admin list | page={} size={} sortBy={} sortDir={} filters=[name={}, email={}, phone={}, dept={}, role={}, active={}]",
+      filter.getPage(), filter.getSize(),
+      filter.getSortBy(), filter.getSortDir(),
+      filter.getName(), filter.getEmail(), filter.getPhone(),
+      filter.getDepartment(), filter.getRole(), filter.getIsActive()
+    );
+
+    // 1. Validate + build Sort
+    Sort sort = SortUtil.build(filter.getSortBy(), filter.getSortDir(), SORTABLE_FIELDS);
+
+    // 2. Build Pageable
+    Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
+
+    // 3. Build Specification (all filters + soft-delete exclusion)
+    Specification<AdminEntity> spec = AdminSpecification.withFilters(filter);
+
+    // 4. Query
+    Page<AdminEntity> resultPage = adminRepository.findAll(spec, pageable);
+
+    log.info("Admin list fetched | total={} pages={}", resultPage.getTotalElements(), resultPage.getTotalPages());
+
+    // 5. Map to DTO and return wrapped in PagedResponse
+    return PagedResponse.from(resultPage, AdminMapper::toSummary, filter.getSortBy(), filter.getSortDir());
+  }
+
+  // ─────────────────────────────────────────────────────────
+// UPDATE ADMIN STATUS  (toggle isActive + soft delete)
+// Add this method inside AdminServiceImpl
+// ─────────────────────────────────────────────────────────
+
+  @Override
+  @Transactional
+  public UpdateAdminStatusResponse updateAdminStatus(Long targetAdminId, boolean setActive) {
+    log.info("=== Update Admin Status | targetId={} ===", targetAdminId);
+
+    Long requesterId = SecurityUtils.getCurrentAdminId();
+
+    // ── Rule 1: SUPER_ADMIN cannot deactivate themselves ──
+    if (requesterId.equals(targetAdminId)) {
+      throw new BaseException(
+        HttpStatus.FORBIDDEN,
+        "SELF_DEACTIVATION_NOT_ALLOWED",
+        "You cannot change your own active status."
+      );
+    }
+
+    // ── Fetch target admin ────────────────────────────────
+    AdminEntity target = adminRepository.findById(targetAdminId)
+      .orElseThrow(() -> new BaseException(
+        HttpStatus.NOT_FOUND,
+        "ADMIN_NOT_FOUND",
+        "Admin with id " + targetAdminId + " not found."
+      ));
+
+    if(target.getIsActive().equals(setActive)){
+      return UpdateAdminStatusResponse.builder()
+        .id(target.getId())
+        .fullName(target.getFullName())
+        .email(target.getEmail())
+        .adminRole(target.getAdminRole())
+        .isActive(target.getIsActive())
+        .deletedAt(target.getDeletedAt())
+        .updatedAt(target.getUpdatedAt())
+        .message("Admin " + target.getFullName() + " is already " + (setActive ? "active" : "inactive") + ".")
+        .build();
+    }
+
+    target.setIsActive(setActive);
+    String action = setActive ? "activated" : "deactivated";
+    if(setActive){
+      target.setDeletedAt(null);
+    }
+    else{
+      target.setDeletedAt(LocalDateTime.now());
+    }
+    AdminEntity saved = adminRepository.save(target);
+    // ── Toggle ────────────────────────────────────────────
+
+    return UpdateAdminStatusResponse.builder()
+      .id(saved.getId())
+      .fullName(saved.getFullName())
+      .email(saved.getEmail())
+      .adminRole(saved.getAdminRole())
+      .isActive(saved.getIsActive())
+      .deletedAt(saved.getDeletedAt())
+      .updatedAt(saved.getUpdatedAt())
+      .message("Admin " + saved.getFullName() + " has been " + action + " successfully.")
+      .build();
+  }
+
+
+
+
 
 }
