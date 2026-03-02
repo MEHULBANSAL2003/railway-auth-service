@@ -81,7 +81,7 @@ public class AdminController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-  @PatchMapping(ApiConstants.ADMIN_UPDATE_STATUS)
+  @PostMapping(ApiConstants.ADMIN_UPDATE_STATUS)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<UpdateAdminStatusResponse>> updateAdminStatus(
     @PathVariable Long adminId, @RequestParam("setActive") Boolean setActive
@@ -91,7 +91,7 @@ public class AdminController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-  @PatchMapping(ApiConstants.ADMIN_UPDATE_ROLE)
+  @PostMapping(ApiConstants.ADMIN_UPDATE_ROLE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<UpdateAdminStatusResponse>> updateAdminRole(
     @PathVariable Long adminId, @RequestParam("newRole") Boolean setActive
