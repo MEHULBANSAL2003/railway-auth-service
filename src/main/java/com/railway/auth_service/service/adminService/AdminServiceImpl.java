@@ -46,6 +46,7 @@ public class AdminServiceImpl implements AdminService{
   private final RefreshTokenService refreshTokenService;
 
   private static final Set<String> SORTABLE_FIELDS = Set.of(
+    "id",
     "fullName",
     "email",
     "phoneNumber",
