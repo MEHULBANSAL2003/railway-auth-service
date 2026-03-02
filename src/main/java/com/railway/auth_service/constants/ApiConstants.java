@@ -21,7 +21,7 @@ public class ApiConstants {
   public static final String CREATE_NEW_ADMIN = "/new/admin/create";
   public static final String ADMIN_LIST = "/admin/list";
   public static final String ADMIN_UPDATE_STATUS = "/admin/update/status/{adminId}"; // Activate/deactivate
-  public static final String ADMIN_UPDATE_ROLE = "/admin/role/update"; // Change permissions
+  public static final String ADMIN_UPDATE_ROLE = "/admin/role/update/{adminId}"; // Change permissions
   public static final String ADMIN_DELETE = "/admin/delete/{id}";
 
 

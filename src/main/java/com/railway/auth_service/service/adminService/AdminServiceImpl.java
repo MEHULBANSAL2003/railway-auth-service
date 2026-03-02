@@ -269,8 +269,62 @@ public class AdminServiceImpl implements AdminService{
       .build();
   }
 
+  @Override
+  @Transactional
+  public UpdateAdminStatusResponse updateAdminRole(Long targetAdminId, String newRole) {
 
+    if (!Role.isValidRole(newRole)) {
+      throw new BaseException(
+        HttpStatus.BAD_REQUEST,
+        "INVALID_ROLE",
+        "Invalid role: " + newRole
+      );
+    }
+    Long requesterId = SecurityUtils.getCurrentAdminId();
+    if(requesterId.equals(targetAdminId)){
+      throw new BaseException(
+        HttpStatus.FORBIDDEN,
+        "SELF_ROLE_CHANGE_NOT_ALLOWED",
+        "You cannot change your own role."
+      );
+    };
 
+    AdminEntity target = adminRepository.findById(targetAdminId)
+      .orElseThrow(() -> new BaseException(
+        HttpStatus.NOT_FOUND,
+        "ADMIN_NOT_FOUND",
+        "Admin with id " + targetAdminId + " not found."
+      ));
+
+    if(newRole.equals(target.getAdminRole().name())){
+      return UpdateAdminStatusResponse.builder()
+        .id(target.getId())
+        .fullName(target.getFullName())
+        .email(target.getEmail())
+        .adminRole(target.getAdminRole())
+        .isActive(target.getIsActive())
+        .deletedAt(target.getDeletedAt())
+        .updatedAt(target.getUpdatedAt())
+        .message("Admin " + target.getFullName() + " already has role " + newRole + ".")
+        .build();
+    }
+
+    target.setAdminRole(Role.valueOf(newRole));
+
+    AdminEntity saved = adminRepository.save(target);
+
+    return UpdateAdminStatusResponse.builder()
+      .id(saved.getId())
+      .fullName(saved.getFullName())
+      .email(saved.getEmail())
+      .adminRole(saved.getAdminRole())
+      .isActive(saved.getIsActive())
+      .deletedAt(saved.getDeletedAt())
+      .updatedAt(saved.getUpdatedAt())
+      .message("Admin " + saved.getFullName() + "'s role has been updated to  " + newRole + " successfully.")
+      .build();
+
+  }
 
 
 }

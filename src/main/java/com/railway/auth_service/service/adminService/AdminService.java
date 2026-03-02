@@ -20,4 +20,6 @@ public interface AdminService {
   public PagedResponse<AdminSummaryResponse> getAdminList(AdminFilterRequest filter);
 
   public UpdateAdminStatusResponse updateAdminStatus(Long targetAdminId, boolean setActive);
+
+  public UpdateAdminStatusResponse updateAdminRole(Long targetAdminId, String newRole);
 }

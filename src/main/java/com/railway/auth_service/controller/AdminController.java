@@ -91,6 +91,16 @@ public class AdminController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
+  @PatchMapping(ApiConstants.ADMIN_UPDATE_ROLE)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<UpdateAdminStatusResponse>> updateAdminRole(
+    @PathVariable Long adminId, @RequestParam("newRole") Boolean setActive
+  ) {
+    log.info("Update admin role request | targetId={}", adminId);
+    UpdateAdminStatusResponse response = adminService.updateAdminStatus(adminId,setActive);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
 
 
 }
