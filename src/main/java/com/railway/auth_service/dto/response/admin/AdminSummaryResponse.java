@@ -20,6 +20,8 @@ public class AdminSummaryResponse {
   private Department  department;
   private Boolean     isActive;
   private String      profilePictureUrl;
+  private boolean canUpdatedByCurrentAdmin;
+  private boolean canDeletedByCurrentAdmin;
   private LocalDateTime lastLoginAt;
   private LocalDateTime createdAt;
 }

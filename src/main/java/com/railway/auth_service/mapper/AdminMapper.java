@@ -2,6 +2,7 @@ package com.railway.auth_service.mapper;
 
 import com.railway.auth_service.dto.response.admin.AdminSummaryResponse;
 import com.railway.auth_service.entity.AdminEntity;
+import com.railway.common.security.SecurityUtils;
 
 /**
  * Stateless mapper for AdminEntity conversions.
@@ -16,6 +17,8 @@ public final class AdminMapper {
    * suitable for list endpoints.
    */
   public static AdminSummaryResponse toSummary(AdminEntity admin) {
+    boolean isSuperAdmin = SecurityUtils.isSuperAdmin();
+
     return AdminSummaryResponse.builder()
       .id(admin.getId())
       .fullName(admin.getFullName())
@@ -28,6 +31,8 @@ public final class AdminMapper {
       .profilePictureUrl(admin.getProfilePictureUrl())
       .lastLoginAt(admin.getLastLoginAt())
       .createdAt(admin.getCreatedAt())
+      .canUpdatedByCurrentAdmin(isSuperAdmin)
+      .canDeletedByCurrentAdmin(isSuperAdmin)
       .build();
   }
 }
