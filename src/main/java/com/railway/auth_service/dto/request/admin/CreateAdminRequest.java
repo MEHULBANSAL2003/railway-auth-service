@@ -4,6 +4,8 @@ import com.railway.common.enums.Department;
 import com.railway.common.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,10 +27,11 @@ public class CreateAdminRequest {
  private String countryCode;
 
  @NotBlank(message = "Phone number is required")
+ @Pattern(regexp = "^[0-9]{10}$", message = "Phone number must be exactly 10 digits")
  private String phoneNumber;
 
- private Role role;
+  private Role role = Role.ADMIN;
 
- private Department department;
-
+  @NotNull(message = "Department is required")
+  private Department department;
 }
