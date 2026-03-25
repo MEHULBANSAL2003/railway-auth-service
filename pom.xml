@@ -1,112 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
+  <!--
+      Unlike common-lib, auth-service IS a runnable Spring Boot app.
+      So it uses spring-boot-starter-parent — this gives us:
+        - Executable JAR packaging (java -jar auth-service.jar)
+        - Embedded Tomcat server
+        - Pre-configured dependency versions
+  -->
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.9</version>
+    <version>3.2.4</version>
     <relativePath/>
   </parent>
-  <groupId>com.railway</groupId>
-  <artifactId>auth-service</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <name>auth-service</name>
-  <description>Railway Auth Service</description>
+
+  <groupId>com.railways</groupId>
+  <artifactId>railway-auth-service</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
 
   <properties>
     <java.version>21</java.version>
   </properties>
 
   <dependencies>
-
+    <!--
+        OUR common-lib — this single line gives auth-service:
+        ApiResponse, GlobalExceptionHandler, JwtUtil,
+        JwtAuthFilter, AuthPrincipal, CorrelationIdFilter,
+        and all transitive dependencies (Spring Web, Security,
+        Redis, Kafka, JWT libs, etc.)
+    -->
     <dependency>
       <groupId>com.railway</groupId>
-      <artifactId>common-models</artifactId>
+      <artifactId>railway-common-lib</artifactId>
       <version>1.0.0</version>
     </dependency>
 
+    <!--
+        JPA + PostgreSQL — uncomment when we build entities
+    -->
+    <!--
     <dependency>
-      <groupId>com.railway</groupId>
-      <artifactId>common-exceptions</artifactId>
-      <version>1.0.0</version>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
-
     <dependency>
-      <groupId>com.railway</groupId>
-      <artifactId>common-security</artifactId>
-      <version>1.0.0</version>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>runtime</scope>
     </dependency>
+    -->
 
-    <dependency>
-      <groupId>com.railway</groupId>
-      <artifactId>common-logging</artifactId>
-      <version>1.0.0</version>
-    </dependency>
-
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-validation</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-actuator</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-devtools</artifactId>
-      <scope>runtime</scope>
-      <optional>true</optional>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.google.api-client</groupId>
-      <artifactId>google-api-client</artifactId>
-      <version>2.2.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
-    </dependency>
-
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-
+    <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <optional>true</optional>
     </dependency>
 
+    <!-- Test -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.railways</groupId>
+      <artifactId>railway-common-lib</artifactId>
+      <version>1.0.0</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -114,8 +82,15 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
       </plugin>
     </plugins>
   </build>
-
 </project>
