@@ -1,0 +1,73 @@
+package com.railway.auth_service.mapper;
+
+import com.railway.auth_service.dto.response.AdminResponse;
+import com.railway.auth_service.dto.response.AuthResponse;
+import com.railway.auth_service.model.entity.Admin;
+import org.springframework.stereotype.Component;
+
+/**
+ * Converts Admin entity ↔ DTOs.
+ *
+ * WHY a separate mapper class?
+ *   Without it, conversion logic lives in the service or controller:
+ *     AdminResponse response = new AdminResponse();
+ *     response.setAdminId(admin.getAdminId());
+ *     response.setEmail(admin.getEmail());
+ *     ... 15 more lines
+ *
+ *   Repeated everywhere you return an admin. DRY violation.
+ *   Mapper centralizes it — one place to change if a field is
+ *   added or the response format changes.
+ *
+ * WHY not MapStruct?
+ *   MapStruct generates mapper implementations at compile time
+ *   using annotations. It's great for large projects with many
+ *   entities. For our scale, a hand-written mapper is simpler
+ *   and easier to understand. We can migrate to MapStruct later
+ *   if the boilerplate grows. KISS.
+ */
+@Component
+public class AdminMapper {
+
+  /**
+   * Entity → Full Response DTO (for admin management APIs).
+   */
+  public AdminResponse toResponse(Admin admin) {
+    return AdminResponse.builder()
+      .adminId(admin.getAdminId())
+      .email(admin.getEmail())
+      .firstName(admin.getFirstName())
+      .lastName(admin.getLastName())
+      .profileImageUrl(admin.getProfileImageUrl())
+      .countryCode(admin.getCountryCode())
+      .phone(admin.getPhone())
+      .department(admin.getDepartment())
+      .role(admin.getRole())
+      .emailVerified(admin.isEmailVerified())
+      .enabled(admin.isEnabled())
+      .lastLoginAt(admin.getLastLoginAt())
+      .createdAt(admin.getCreatedAt())
+      .createdBy(admin.getCreatedBy())
+      .build();
+  }
+
+  /**
+   * Entity → Profile Response (for login response).
+   * Lighter than full response — only what the frontend
+   * needs to display immediately after login.
+   */
+  public AuthResponse.AdminProfileResponse toProfileResponse(Admin admin) {
+    return AuthResponse.AdminProfileResponse.builder()
+      .adminId(admin.getAdminId())
+      .email(admin.getEmail())
+      .firstName(admin.getFirstName())
+      .lastName(admin.getLastName())
+      .profileImageUrl(admin.getProfileImageUrl())
+      .countryCode(admin.getCountryCode())
+      .phone(admin.getPhone())
+      .department(admin.getDepartment().name())
+      .role(admin.getRole().name())
+      .emailVerified(admin.isEmailVerified())
+      .build();
+  }
+}

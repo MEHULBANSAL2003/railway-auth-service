@@ -51,11 +51,11 @@ public class SecurityConfig {
         // Public endpoints — no token needed
         .requestMatchers(
           "/api/auth/**",
-          "/api/test/public",
-          "/api/test/token",
-          "/api/test/error-*",
           "/actuator/**"
         ).permitAll()
+
+        // Admin endpoints — require authentication
+        .requestMatchers("/api/admin/**").authenticated()
 
         // Everything else requires authentication
         .anyRequest().authenticated()
