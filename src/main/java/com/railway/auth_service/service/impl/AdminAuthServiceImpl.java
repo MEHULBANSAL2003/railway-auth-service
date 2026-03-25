@@ -84,9 +84,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
       admin.setEmailVerified(true);
       log.info("First Google login — googleId linked for admin: {}", admin.getAdminId());
     }
-
-    // Step 5: Subsequent login — verify googleId matches
-    if (!admin.getGoogleId().equals(googleUser.getGoogleId())) {
+    else if (!admin.getGoogleId().equals(googleUser.getGoogleId())) {
       log.warn("GoogleId mismatch for admin: {} — possible account takeover attempt",
         admin.getEmail());
       throw new ForbiddenException("Google account mismatch. Contact super admin.");
