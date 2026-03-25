@@ -62,11 +62,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.railways</groupId>
-      <artifactId>railway-common-lib</artifactId>
-      <version>1.0.0</version>
-    </dependency>
-    <dependency>
       <groupId>org.hibernate.common</groupId>
       <artifactId>hibernate-commons-annotations</artifactId>
       <version>7.0.3.Final</version>
@@ -79,7 +74,7 @@
     </dependency>
     <dependency>
       <groupId>com.google.http-client</groupId>
-      <artifactId>google-http-client-parent</artifactId>
+      <artifactId>google-http-client</artifactId>
       <version>1.42.0</version>
     </dependency>
   </dependencies>

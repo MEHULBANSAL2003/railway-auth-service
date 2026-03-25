@@ -4,6 +4,7 @@ package com.railway.auth_service.controller;
 import com.railway.auth_service.constant.ApiConstants;
 import com.railway.auth_service.dto.request.GoogleLoginRequest;
 import com.railway.auth_service.dto.response.AuthResponse;
+import com.railway.auth_service.service.AdminAuthService;
 import com.railway.common.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AdminAuthController {
 
+  private final AdminAuthService adminAuthService;
+
   @PostMapping(ApiConstants.ADMIN_GOOGLE_LOGIN)
   public ResponseEntity<ApiResponse<AuthResponse>> adminGoogleLogin(
     @Valid @RequestBody GoogleLoginRequest request,
@@ -29,9 +32,9 @@ public class AdminAuthController {
     String clientIp = extractClientIp(httpRequest);
     log.info("Admin Google login attempt from IP: {}", clientIp);
 
-    //AuthResponse response = adminAuthService.googleLogin(request.getIdToken(), clientIp);
+    AuthResponse response = adminAuthService.googleLogin(request.getIdToken(), clientIp);
 
-    return ResponseEntity.ok(ApiResponse.success());
+    return ResponseEntity.ok(ApiResponse.success(response));
   }
 
 
