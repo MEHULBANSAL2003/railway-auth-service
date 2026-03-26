@@ -2,6 +2,7 @@ package com.railway.auth_service.mapper;
 
 import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AuthResponse;
+import com.railway.auth_service.dto.response.CreateAdminResponse;
 import com.railway.auth_service.model.entity.Admin;
 import org.springframework.stereotype.Component;
 
@@ -28,34 +29,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class AdminMapper {
-
-  /**
-   * Entity → Full Response DTO (for admin management APIs).
-   */
-  public AdminResponse toResponse(Admin admin) {
-    return AdminResponse.builder()
-      .adminId(admin.getAdminId())
-      .email(admin.getEmail())
-      .firstName(admin.getFirstName())
-      .lastName(admin.getLastName())
-      .profileImageUrl(admin.getProfileImageUrl())
-      .countryCode(admin.getCountryCode())
-      .phone(admin.getPhone())
-      .department(admin.getDepartment())
-      .role(admin.getRole())
-      .emailVerified(admin.isEmailVerified())
-      .enabled(admin.isEnabled())
-      .lastLoginAt(admin.getLastLoginAt())
-      .createdAt(admin.getCreatedAt())
-      .createdBy(admin.getCreatedBy())
-      .build();
-  }
-
-  /**
-   * Entity → Profile Response (for login response).
-   * Lighter than full response — only what the frontend
-   * needs to display immediately after login.
-   */
   public AuthResponse.AdminProfileResponse toProfileResponse(Admin admin) {
     return AuthResponse.AdminProfileResponse.builder()
       .adminId(admin.getAdminId())
@@ -68,6 +41,24 @@ public class AdminMapper {
       .department(admin.getDepartment().name())
       .role(admin.getRole().name())
       .emailVerified(admin.isEmailVerified())
+      .build();
+  }
+
+  public CreateAdminResponse toCreateResponse(Admin admin) {
+    return CreateAdminResponse.builder()
+      .message("Admin created successfully")
+      .admin(CreateAdminResponse.AdminDetails.builder()
+        .adminId(admin.getAdminId())
+        .email(admin.getEmail())
+        .firstName(admin.getFirstName())
+        .lastName(admin.getLastName())
+        .countryCode(admin.getCountryCode())
+        .phone(admin.getPhone())
+        .department(admin.getDepartment().name())
+        .role(admin.getRole().name())
+        .emailVerified(admin.isEmailVerified())
+        .enabled(admin.isEnabled())
+        .build())
       .build();
   }
 }
