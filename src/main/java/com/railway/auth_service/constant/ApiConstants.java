@@ -29,7 +29,7 @@ public final class ApiConstants {
   // Base paths
   // ─────────────────────────────────────
   public static final String AUTH_BASE = "/api/auth";
-  public static final String ADMINS_BASE = "/api/admins";
+  public static final String ADMINS_BASE = "/api/admin";
   public static final String USERS_BASE = "/api/users";
 
   // ─────────────────────────────────────
@@ -54,14 +54,6 @@ public final class ApiConstants {
   public static final String ADMIN_ENABLE = "/{adminId}/enable";
   public static final String ADMIN_DISABLE = "/{adminId}/disable";
 
-  // ─────────────────────────────────────
-  // Admin Self (any authenticated admin)
-  // ─────────────────────────────────────
-  public static final String ME = "/me";
-
-  // ─────────────────────────────────────
-  // User Auth (public — no token needed)
-  // ─────────────────────────────────────
   public static final String USER_AUTH = AUTH_BASE + "/user";
   public static final String USER_REGISTER = USER_AUTH + "/register";
   public static final String USER_LOGIN = USER_AUTH + "/login";

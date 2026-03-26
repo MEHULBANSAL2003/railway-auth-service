@@ -1,8 +1,8 @@
 package com.railway.auth_service.controller;
 
-
 import com.railway.auth_service.constant.ApiConstants;
 import com.railway.auth_service.dto.request.GoogleLoginRequest;
+import com.railway.auth_service.dto.request.RefreshRequest;
 import com.railway.auth_service.dto.response.AuthResponse;
 import com.railway.auth_service.service.AdminAuthService;
 import com.railway.common.dto.ApiResponse;
@@ -37,10 +37,18 @@ public class AdminAuthController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
+  @PostMapping(ApiConstants.ADMIN_REFRESH)
+  public ResponseEntity<ApiResponse<AuthResponse>> refresh(
+    @Valid @RequestBody RefreshRequest request,
+    HttpServletRequest httpRequest) {
 
+    String clientIp = extractClientIp(httpRequest);
+    log.debug("Admin token refresh attempt from IP: {}", clientIp);
 
+    AuthResponse response = adminAuthService.refresh(request.getRefreshToken(), clientIp);
 
-
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
 
   private String extractClientIp(HttpServletRequest request) {
     String xff = request.getHeader("X-Forwarded-For");
