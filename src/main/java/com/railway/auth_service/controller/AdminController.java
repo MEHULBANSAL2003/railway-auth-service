@@ -15,10 +15,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 /**
  * Authenticated admin session operations.
@@ -59,5 +63,31 @@ public class AdminController {
     CreateAdminResponse response = adminService.createAdmin(request, principal.getId());
 
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+  }
+
+  @PatchMapping(ApiConstants.ADMIN_TOGGLE_STATUS)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> toggleStatus(
+    @PathVariable Long adminId,
+    @AuthenticationPrincipal AuthPrincipal principal) {
+
+    log.info("Toggle admin status: adminId={}, by={}", adminId, principal.getId());
+
+    Map<String, Object> response = adminService.toggleStatus(adminId, principal.getId());
+
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PatchMapping(ApiConstants.ADMIN_CHANGE_ROLE)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> changeRole(
+    @PathVariable Long adminId,
+    @AuthenticationPrincipal AuthPrincipal principal) {
+
+    log.info("Change admin role: adminId={}, by={}", adminId, principal.getId());
+
+    Map<String, Object> response = adminService.changeRole(adminId, principal.getId());
+
+    return ResponseEntity.ok(ApiResponse.success(response));
   }
 }

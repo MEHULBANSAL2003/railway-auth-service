@@ -40,19 +40,10 @@ public final class ApiConstants {
   public static final String ADMIN_REFRESH = "/refresh";
   public static final String ADMIN_LOGOUT = "/logout";
 
-  // ─────────────────────────────────────
-  // Admin Management (SUPER_ADMIN only)
-  // ─────────────────────────────────────
-  // POST   /api/admins              → create
-  // GET    /api/admins              → list all
-  // GET    /api/admins/{adminId}    → get by ID
-  // PUT    /api/admins/{adminId}    → update
-  // PATCH  /api/admins/{adminId}/enable   → enable
-  // PATCH  /api/admins/{adminId}/disable  → disable
-  // DELETE /api/admins/{adminId}    → soft delete
+
   public static final String ADMIN_BY_ID = "/{adminId}";
-  public static final String ADMIN_ENABLE = "/{adminId}/enable";
-  public static final String ADMIN_DISABLE = "/{adminId}/disable";
+  public static final String ADMIN_TOGGLE_STATUS = "{adminId}/toggle-status";
+  public static final String ADMIN_CHANGE_ROLE = "{adminId}/change-role";
 
   public static final String USER_AUTH = AUTH_BASE + "/user";
   public static final String USER_REGISTER = USER_AUTH + "/register";
