@@ -9,6 +9,7 @@ import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.service.AdminAuthService;
 import com.railway.auth_service.service.GoogleTokenVerifier;
 import com.railway.auth_service.service.GoogleTokenVerifier.GoogleUserInfo;
+import com.railway.common.security.TokenBlacklistService;
 import com.railway.common.exception.ForbiddenException;
 import com.railway.common.exception.ResourceNotFoundException;
 import com.railway.common.exception.ServiceException;
@@ -21,7 +22,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -33,6 +36,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
   private final RefreshTokenRepository refreshTokenRepository;
   private final JwtUtil jwtUtil;
   private final AdminMapper adminMapper;
+ private final Optional<TokenBlacklistService> blacklistService;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -77,6 +81,10 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     // Step 6: Revoke all existing refresh tokens (single session enforcement)
     refreshTokenRepository.revokeAllByOwner(admin.getAdminId(), "admin");
     log.debug("Revoked existing sessions for admin: {}", admin.getAdminId());
+
+    blacklistService.ifPresent(service ->
+      service.setCutoff("admin", admin.getAdminId(), Duration.ofMillis(accessTokenExpiry))
+    );
 
     // Step 7: Update login metadata
     boolean isFirstLogin = admin.getLastLoginAt() == null;
@@ -274,6 +282,10 @@ public class AdminAuthServiceImpl implements AdminAuthService {
       storedToken.setRevoked(true);
       refreshTokenRepository.save(storedToken);
       log.info("Admin logged out: admin_id={}", adminId);
+
+      blacklistService.ifPresent(service ->
+        service.setCutoff("admin", adminId, Duration.ofMillis(accessTokenExpiry))
+      );
     }
   }
 }

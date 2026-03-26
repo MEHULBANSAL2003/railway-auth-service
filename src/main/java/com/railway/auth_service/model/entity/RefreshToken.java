@@ -11,10 +11,10 @@ import java.time.Instant;
   name = "refresh_tokens",
   schema = "railway_auth",
   uniqueConstraints = {
-    @UniqueConstraint(name = "uk_refresh_tokens_token", columnNames = "token")
+    @UniqueConstraint(name = "uk_refresh_tokens_token", columnNames = "refresh_token")
   },
   indexes = {
-    @Index(name = "idx_refresh_token", columnList = "token"),
+    @Index(name = "idx_refresh_token", columnList = "refresh_token"),
     @Index(name = "idx_refresh_owner", columnList = "owner_id, owner_type"),
     @Index(name = "idx_refresh_expires", columnList = "expires_at")
   }
