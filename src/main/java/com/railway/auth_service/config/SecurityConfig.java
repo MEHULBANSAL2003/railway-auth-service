@@ -2,8 +2,10 @@ package com.railway.auth_service.config;
 
 import com.railway.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -12,8 +14,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
@@ -40,8 +42,9 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
     http
-      // Enable CORS for frontend
-      .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+      // Disable Spring Security's CORS processing — handled by
+      // our standalone CorsFilter registered at highest precedence.
+      .cors(AbstractHttpConfigurer::disable)
 
       // Disable CSRF — we're a stateless REST API using JWT,
       // not a server-rendered form-based app.
@@ -75,8 +78,21 @@ public class SecurityConfig {
     return http.build();
   }
 
+  /**
+   * Standalone CORS filter registered at HIGHEST_PRECEDENCE.
+   *
+   * WHY not use Spring Security's .cors()?
+   *   Spring Security's built-in CORS runs inside the security filter chain.
+   *   If any security filter rejects the request (401/403) before CORS
+   *   headers are added, the browser sees a response without CORS headers
+   *   and reports "CORS error" instead of the actual 401/403.
+   *
+   *   By registering CorsFilter as a servlet filter at highest precedence,
+   *   it runs BEFORE the entire Spring Security chain. CORS headers are
+   *   always added — even on error responses.
+   */
   @Bean
-  public CorsConfigurationSource corsConfigurationSource() {
+  public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
     CorsConfiguration config = new CorsConfiguration();
     config.setAllowedOrigins(List.of("http://localhost:3000"));
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
@@ -86,6 +102,9 @@ public class SecurityConfig {
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", config);
-    return source;
+
+    FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(source));
+    bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+    return bean;
   }
 }
