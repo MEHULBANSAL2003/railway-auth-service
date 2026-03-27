@@ -1,6 +1,7 @@
 package com.railway.auth_service.service.impl;
 
 import com.railway.auth_service.dto.request.CreateAdminRequest;
+import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
 import com.railway.auth_service.mapper.AdminMapper;
 import com.railway.auth_service.model.entity.Admin;
@@ -8,15 +9,21 @@ import com.railway.auth_service.model.enums.AdminRole;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.service.AdminService;
+import com.railway.common.dto.PagedResponse;
 import com.railway.common.exception.BadRequestException;
 import com.railway.common.exception.ConflictException;
 import com.railway.common.exception.ForbiddenException;
 import com.railway.common.exception.ResourceNotFoundException;
 import com.railway.common.security.TokenBlacklistService;
+import com.railway.common.specification.GenericSpecification;
+import com.railway.common.util.PaginationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +41,10 @@ public class AdminServiceImpl implements AdminService {
   private final AdminMapper adminMapper;
   private final Optional<TokenBlacklistService> blacklistService;
   private final RefreshTokenRepository refreshTokenRepository;
+
+  private static final String[] ALLOWED_SORT_FIELDS = {
+    "createdAt", "email", "firstName", "department", "role", "lastLoginAt"
+  };
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -149,5 +160,65 @@ public class AdminServiceImpl implements AdminService {
     result.put("email", admin.getEmail());
     result.put("enabled", newStatus);
     return result;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public AdminResponse getAdminById(Long adminId) {
+    Admin admin = adminRepository.findById(adminId)
+      .orElseThrow(() -> new ResourceNotFoundException("Admin", "adminId", adminId));
+    return adminMapper.toResponse(admin);
+  }
+
+  /**
+   * Get own profile. Same as getAdminById but semantically different —
+   * any admin can call this, not just SUPER_ADMIN.
+   */
+  @Override
+  @Transactional(readOnly = true)
+  public AdminResponse getOwnProfile(Long adminId) {
+    Admin admin = adminRepository.findById(adminId)
+      .orElseThrow(() -> new ResourceNotFoundException("Admin", "adminId", adminId));
+    return adminMapper.toResponse(admin);
+  }
+
+  /**
+   * List admins with pagination, sorting, and filtering.
+   *
+   * Admin panel sees everything (active + inactive).
+   * No activeOnly filter — admins need the full picture.
+   *
+   * Filters are all optional — null values are ignored.
+   * ?role=ADMIN → only ADMINs
+   * ?department=OPERATIONS&search=priya → OPERATIONS dept, name/email contains "priya"
+   * no params → all admins, sorted by createdAt desc
+   */
+  @Override
+  @Transactional(readOnly = true)
+  public PagedResponse<AdminResponse> listAdmins(Integer page, Integer size,
+                                                 String sortBy, String sortDir,
+                                                 String role, String department,
+                                                 Boolean enabled, String searchName,
+                                                 String searchEmail, String searchPhone,
+                                                 String search) {
+
+    Pageable pageable = PaginationUtil.buildPageable(page, size, sortBy, sortDir, ALLOWED_SORT_FIELDS);
+
+    Specification<Admin> spec = GenericSpecification.<Admin>builder()
+      // Exact match filters (dropdowns in frontend)
+      .equal("role", role)
+      .equal("department", department)
+      .isTrue("enabled", enabled)
+      // Column-specific LIKE filters (per-column search in data table)
+      .like("firstName", searchName)
+      .like("email", searchEmail)
+      .like("phone", searchPhone)
+      // Global search (search bar — across all text fields)
+      .search(search, "email", "firstName", "lastName", "phone")
+      .build();
+
+    Page<Admin> adminPage = adminRepository.findAll(spec, pageable);
+
+    return PagedResponse.of(adminPage, adminMapper::toResponse);
   }
 }

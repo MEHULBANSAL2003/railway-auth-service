@@ -29,6 +29,26 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class AdminMapper {
+
+  public AdminResponse toResponse(Admin admin) {
+    return AdminResponse.builder()
+      .adminId(admin.getAdminId())
+      .email(admin.getEmail())
+      .firstName(admin.getFirstName())
+      .lastName(admin.getLastName())
+      .profileImageUrl(admin.getProfileImageUrl())
+      .countryCode(admin.getCountryCode())
+      .phone(admin.getPhone())
+      .department(admin.getDepartment())
+      .role(admin.getRole())
+      .emailVerified(admin.isEmailVerified())
+      .enabled(admin.isEnabled())
+      .lastLoginAt(admin.getLastLoginAt())
+      .createdAt(admin.getCreatedAt())
+      .createdBy(admin.getCreatedBy())
+      .build();
+  }
+
   public AuthResponse.AdminProfileResponse toProfileResponse(Admin admin) {
     return AuthResponse.AdminProfileResponse.builder()
       .adminId(admin.getAdminId())
