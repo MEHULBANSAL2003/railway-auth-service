@@ -34,16 +34,5 @@ public class RegisterVerifyRequest {
   )
   private String otp;
 
-  /**
-   * Same password rules as RegisterInitiateRequest.
-   * Why validate again? Never trust the frontend.
-   * User could bypass frontend validation with Postman.
-   * Always validate on backend — both times.
-   */
-  @NotBlank(message = "Password is required")
-  @Pattern(
-    regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!?_-]).{8,64}$",
-    message = "Password must be 8-64 characters with at least one uppercase, one lowercase, one digit, and one special character"
-  )
-  private String password;
+
 }
