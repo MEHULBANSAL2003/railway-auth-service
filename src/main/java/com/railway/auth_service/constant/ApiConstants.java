@@ -47,7 +47,9 @@ public final class ApiConstants {
  public static final String GET_MY_PROFILE = "/me";
 
   public static final String USER_AUTH = AUTH_BASE + "/user";
-  public static final String USER_REGISTER = USER_AUTH + "/register";
+  public static final String USER_REGISTER = USER_AUTH + "/register/initiate";
+  public static final String USER_OTP_VERIFY = USER_AUTH + "/register/otp/verify";
+  public static final String USER_RESEND_OTP = USER_AUTH + "/register/otp/resend";
   public static final String USER_LOGIN = USER_AUTH + "/login";
   public static final String USER_PHONE_LOGIN = USER_AUTH + "/phone-login";
   public static final String USER_REFRESH = USER_AUTH + "/refresh";
