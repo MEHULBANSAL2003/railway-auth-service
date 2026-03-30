@@ -1,6 +1,7 @@
 package com.railway.auth_service.service.impl;
 
 import com.railway.auth_service.config.properties.OtpProperties;
+import com.railway.auth_service.dto.request.LoginRequest;
 import com.railway.auth_service.dto.request.RegisterInitiateRequest;
 import com.railway.auth_service.dto.request.RegisterResendRequest;
 import com.railway.auth_service.dto.request.RegisterVerifyRequest;
@@ -13,9 +14,13 @@ import com.railway.auth_service.model.enums.UserStatus;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
 import com.railway.auth_service.service.UserAuthService;
+import com.railway.auth_service.service.login.LoginAttemptService;
 import com.railway.auth_service.service.otp.OtpService;
 import com.railway.common.exception.ConflictException;
+import com.railway.common.exception.ForbiddenException;
 import com.railway.common.exception.ServiceException;
+import com.railway.common.exception.TooManyRequestsException;
+import com.railway.common.exception.UnauthorizedException;
 import com.railway.common.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +58,7 @@ public class UserAuthServiceImpl implements UserAuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtUtil jwtUtil;
   private final RefreshTokenRepository refreshTokenRepository;
+  private final LoginAttemptService loginAttemptService;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -268,6 +274,83 @@ public class UserAuthServiceImpl implements UserAuthService {
       .build();
   }
 
+  @Override
+  @Transactional
+  public AuthResponse login(LoginRequest request, String clientIp) {
+    String identifier = request.getIdentifier().trim().toLowerCase();
+
+    User user = findUserByIdentifier(identifier);
+
+    if (user.getStatus() != UserStatus.ACTIVE) {
+      String message = switch (user.getStatus()) {
+        case LOCKED -> "Your account is locked. " +
+          (user.getStatusReason() != null ? user.getStatusReason() : "Contact support.");
+        case DISABLED -> "Your account has been disabled";
+        case SUSPENDED -> "Your account is under review";
+        default -> throw new IllegalStateException("Unexpected value: " + user.getStatus());
+      };
+      
+      throw new ForbiddenException(message);
+    }
+
+    if (loginAttemptService.isLocked(user.getUserId())) {
+      long remaining = loginAttemptService.getRemainingLockTime(user.getUserId());
+      throw new TooManyRequestsException(
+        "Too many failed attempts. Try again in " + remaining + " seconds."
+      );
+    }
+
+    if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+      loginAttemptService.recordFailedAttempt(user.getUserId());
+      // Generic message — don't reveal whether identifier or password is wrong
+      throw new UnauthorizedException("Invalid credentials");
+    }
+
+    loginAttemptService.resetAttempts(user.getUserId());
+
+    refreshTokenRepository.revokeAllByOwner(user.getUserId(), "user");
+
+    user.setLastLoginAt(Instant.now());
+    user.setLastLoginIp(clientIp);
+    userRepository.save(user);
+
+    String accessToken = jwtUtil.generateAccessToken(
+      user.getUserId(),
+      user.getEmail(),
+      "USER",
+      "user"
+    );
+
+    String refreshToken = jwtUtil.generateRefreshToken(
+      user.getUserId(),
+      "user"
+    );
+
+    RefreshToken refreshTokenEntity = RefreshToken.builder()
+      .refreshToken(refreshToken)
+      .ownerId(user.getUserId())
+      .ownerType("user")
+      .ipAddress(clientIp)
+      .expiresAt(Instant.now().plusMillis(refreshTokenExpiry))
+      .build();
+
+    refreshTokenRepository.save(refreshTokenEntity);
+
+    log.info("User logged in: id={}, identifier={}, ip={}",
+      user.getUserId(), maskIdentifier(identifier), clientIp);
+
+    UserProfileResponse profile = buildUserProfile(user);
+
+    return AuthResponse.builder()
+      .accessToken(accessToken)
+      .refreshToken(refreshToken)
+      .tokenType("Bearer")
+      .expiresIn(accessTokenExpiry)
+      .profile(profile)
+      .build();
+
+  }
+
 
   // ═══════════════════════════════════════════
   //  PRIVATE HELPERS
@@ -289,4 +372,46 @@ public class UserAuthServiceImpl implements UserAuthService {
     if (phone == null || phone.length() < 4) return "****";
     return "****" + phone.substring(phone.length() - 4);
   }
+
+  private User findUserByIdentifier(String identifier) {
+    if (identifier.contains("@")) {
+      return userRepository.findByEmail(identifier)
+        .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+    }
+
+    if (identifier.matches("^\\d{10}$")) {
+      return userRepository.findByPhone(identifier)
+        .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+    }
+
+    return userRepository.findByUsername(identifier)
+      .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+  }
+
+  private UserProfileResponse buildUserProfile(User user) {
+    return UserProfileResponse.builder()
+      .userId(user.getUserId())
+      .username(user.getUsername())
+      .fullName(user.getFullName())
+      .email(user.getEmail())
+      .countryCode(user.getCountryCode())
+      .phone(user.getPhone())
+      .phoneVerified(user.isPhoneVerified())
+      .emailVerified(user.isEmailVerified())
+      .profileImageUrl(user.getProfileImageUrl())
+      .build();
+  }
+
+  private String maskIdentifier(String identifier) {
+    if (identifier == null || identifier.length() < 4) return "****";
+    if (identifier.contains("@")) {
+      int atIndex = identifier.indexOf("@");
+      return identifier.substring(0, Math.min(2, atIndex)) + "****" + identifier.substring(atIndex);
+    }
+    if (identifier.matches("^\\d{10}$")) {
+      return "****" + identifier.substring(6);
+    }
+    return identifier.substring(0, 2) + "****";
+  }
+
 }

@@ -69,6 +69,9 @@ app:
     length: 6
     expiry-seconds: 300
     max-attempts: 3
+  login:
+    max-attempts: 5
+    lock-duration-seconds: 1800
 
 google:
   client:

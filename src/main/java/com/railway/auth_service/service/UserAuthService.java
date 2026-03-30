@@ -1,5 +1,6 @@
 package com.railway.auth_service.service;
 
+import com.railway.auth_service.dto.request.LoginRequest;
 import com.railway.auth_service.dto.request.RegisterInitiateRequest;
 import com.railway.auth_service.dto.request.RegisterResendRequest;
 import com.railway.auth_service.dto.request.RegisterVerifyRequest;
@@ -23,4 +24,6 @@ public interface UserAuthService {
   AuthResponse verifyRegistration(RegisterVerifyRequest request, String clientIp);
 
   RegisterInitiateResponse resendOtp(RegisterResendRequest request);
+
+  AuthResponse login(LoginRequest request, String clientIp);
 }

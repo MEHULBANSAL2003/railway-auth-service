@@ -2,6 +2,7 @@ package com.railway.auth_service.controller;
 
 
 import com.railway.auth_service.constant.ApiConstants;
+import com.railway.auth_service.dto.request.LoginRequest;
 import com.railway.auth_service.dto.request.RegisterInitiateRequest;
 import com.railway.auth_service.dto.request.RegisterResendRequest;
 import com.railway.auth_service.dto.request.RegisterVerifyRequest;
@@ -55,6 +56,17 @@ public class UserAuthController {
     @Valid @RequestBody RegisterResendRequest request) {
 
     RegisterInitiateResponse response = userAuthService.resendOtp(request);
+
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PostMapping(ApiConstants.USER_LOGIN)
+  public ResponseEntity<ApiResponse<AuthResponse>> login(
+    @Valid @RequestBody LoginRequest request,
+    HttpServletRequest httpRequest) {
+
+    String clientIp = extractClientIp(httpRequest);
+    AuthResponse response = userAuthService.login(request, clientIp);
 
     return ResponseEntity.ok(ApiResponse.success(response));
   }
