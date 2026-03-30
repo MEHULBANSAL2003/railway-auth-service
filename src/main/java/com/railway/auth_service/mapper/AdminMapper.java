@@ -1,5 +1,6 @@
 package com.railway.auth_service.mapper;
 
+import com.railway.auth_service.dto.response.AdminProfileResponse;
 import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AuthResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
@@ -49,8 +50,8 @@ public class AdminMapper {
       .build();
   }
 
-  public AuthResponse.AdminProfileResponse toProfileResponse(Admin admin) {
-    return AuthResponse.AdminProfileResponse.builder()
+  public AdminProfileResponse toProfileResponse(Admin admin) {
+    return AdminProfileResponse.builder()
       .adminId(admin.getAdminId())
       .email(admin.getEmail())
       .firstName(admin.getFirstName())
@@ -61,8 +62,9 @@ public class AdminMapper {
       .department(admin.getDepartment().name())
       .role(admin.getRole().name())
       .emailVerified(admin.isEmailVerified())
-      .build();
+      .build();    // ← this was missing
   }
+
 
   public CreateAdminResponse toCreateResponse(Admin admin) {
     return CreateAdminResponse.builder()
