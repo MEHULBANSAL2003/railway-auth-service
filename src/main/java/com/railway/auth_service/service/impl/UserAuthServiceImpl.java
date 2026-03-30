@@ -83,6 +83,8 @@ public class UserAuthServiceImpl implements UserAuthService {
     String phone = request.getPhone().trim();
     String fullPhone = formatIndianPhone(phone);
 
+    otpService.checkNotAlreadySent(phone);
+
 
     // ── Step 2: Check uniqueness ──
     // Why check all three separately instead of one query?

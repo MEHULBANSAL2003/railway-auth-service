@@ -348,6 +348,13 @@ public class OtpService {
     return otpProperties.getExpirySeconds();
   }
 
+  public void checkNotAlreadySent(String phone) {
+    String redisKey = OTP_KEY_PREFIX + phone;
+    if (redisTemplate.hasKey(redisKey)) {
+      throw new BadRequestException("OTP already sent to this number. Please wait or use resend.");
+    }
+  }
+
 
   // ═══════════════════════════════════════════
   //  PRIVATE HELPERS
