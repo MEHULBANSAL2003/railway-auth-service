@@ -2,6 +2,7 @@ package com.railway.auth_service.service.sms;
 
 
 import com.railway.auth_service.config.properties.SmsProperties;
+import com.railway.common.exception.ServiceException;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -56,8 +57,8 @@ public class TwilioSmsService implements SmsService {
       log.info("OTP sent successfully to {}", maskPhone(to));
 
     } catch (Exception e) {
-      log.warn("SMS delivery failed to {}. OTP: {} | Error: {}",
-        maskPhone(to), otp, e.getMessage());
+      log.error("SMS delivery failed to {}. Error: {}", maskPhone(to), e.getMessage());
+      throw new ServiceException("Failed to send OTP. Please try again later.");
     }
 
   }

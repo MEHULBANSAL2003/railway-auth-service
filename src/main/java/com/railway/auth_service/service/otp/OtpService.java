@@ -55,8 +55,6 @@ public class OtpService {
    */
   private static final String FIELD_OTP = "otp";
   private static final String FIELD_ATTEMPTS = "attempts";
-  private static final String FIELD_COUNTRY_CODE = "countryCode";
-
   private final SmsService smsService;
   private final StringRedisTemplate redisTemplate;
   private final ObjectMapper objectMapper;
@@ -153,16 +151,14 @@ public class OtpService {
      * Send SMS.
      *
      * Why after Redis store, not before?
-     * If SMS fails, OTP is still in Redis. User can check console log (dev).
+     * If SMS fails, we clean up the Redis key and throw.
      * If we sent SMS first and Redis fails, user has OTP but we can't verify it.
-     * Redis store must succeed for the flow to work. SMS delivery is best-effort.
+     * Redis store must succeed for the flow to work.
      *
-     * Build full phone: "+91" + "9876543210" → "+919876543210"
-     * Twilio/MSG91 need international format.
+     * phone already contains country code (e.g. "+919876543210")
+     * passed by caller via formatIndianPhone().
      */
-    String countryCode = registrationData.get(FIELD_COUNTRY_CODE);
-    String fullPhone = countryCode + phone;
-    smsService.sendOtp(fullPhone, otp);
+    smsService.sendOtp(phone, otp);
 
     log.info("OTP generated and stored for phone: {}", maskPhone(phone));
 
@@ -344,10 +340,8 @@ public class OtpService {
 
     redisTemplate.opsForValue().set(redisKey, serialize(storedData), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
 
-    // Send new OTP via SMS
-    String countryCode = storedData.get(FIELD_COUNTRY_CODE);
-    String fullPhone = countryCode + phone;
-    smsService.sendOtp(fullPhone, newOtp);
+    // Send new OTP via SMS — phone already has country code
+    smsService.sendOtp(phone, newOtp);
 
     log.info("OTP resent for phone: {}", maskPhone(phone));
 
