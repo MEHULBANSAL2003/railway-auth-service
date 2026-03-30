@@ -57,6 +57,12 @@ app:
     access-token-expiry: ${JWT_ACCESS_EXPIRY:900000}
     refresh-token-expiry: ${JWT_REFRESH_EXPIRY:2592000000}
     issuer: railway-auth
+  sms:
+    provider: ${SMS_PROVIDER}
+    api-key: ${SMS_API_KEY}
+  otp:
+    use-fixed: true
+    fixed-value: "111111"
 
 google:
   client:
