@@ -63,6 +63,12 @@ app:
       account-sid: ${TWILIO_ACCOUNT_SID}
       auth-token: ${TWILIO_AUTH_TOKEN}
       from-number: ${TWILIO_FROM_NUMBER}
+  otp:
+    use-fixed: true
+    fixed-value: 111111
+    length: 6
+    expiry-seconds: 300
+    max-attempts: 3
 
 google:
   client:
