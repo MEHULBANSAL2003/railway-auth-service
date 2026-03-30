@@ -289,7 +289,7 @@ public class UserAuthServiceImpl implements UserAuthService {
         case SUSPENDED -> "Your account is under review";
         default -> throw new IllegalStateException("Unexpected value: " + user.getStatus());
       };
-      
+
       throw new ForbiddenException(message);
     }
 
@@ -347,6 +347,89 @@ public class UserAuthServiceImpl implements UserAuthService {
       .tokenType("Bearer")
       .expiresIn(accessTokenExpiry)
       .profile(profile)
+      .build();
+
+  }
+
+  @Override
+  @Transactional
+  public AuthResponse refresh(String refreshTokenStr, String clientIp) {
+    RefreshToken storedToken = refreshTokenRepository.findByRefreshToken(refreshTokenStr)
+      .orElseThrow(() -> {
+        log.warn("User refresh attempt with unknown token from IP: {}", clientIp);
+        return new UnauthorizedException("Invalid refresh token");
+      });
+
+    if (storedToken.isRevoked()) {
+      log.warn("Revoked refresh token used — possible theft. owner_id={}, ip={}",
+        storedToken.getOwnerId(), clientIp);
+      refreshTokenRepository.revokeAllByOwner(storedToken.getOwnerId(), "user");
+      throw new UnauthorizedException("Session expired. Please login again.");
+    }
+
+    if (storedToken.getExpiresAt().isBefore(Instant.now())) {
+      storedToken.setRevoked(true);
+      refreshTokenRepository.save(storedToken);
+      log.info("Expired refresh token used. owner_id={}", storedToken.getOwnerId());
+      throw new UnauthorizedException("Session expired. Please login again.");
+    }
+    if (!"user".equals(storedToken.getOwnerType())) {
+      throw new UnauthorizedException("Invalid token type");
+    }
+
+    Long tokenOwnerId = jwtUtil.extractId(refreshTokenStr);
+    if (!tokenOwnerId.equals(storedToken.getOwnerId())) {
+      log.warn("Refresh token owner mismatch: jwt_sub={}, db_owner={}",
+        tokenOwnerId, storedToken.getOwnerId());
+      throw new UnauthorizedException("Invalid refresh token");
+    }
+
+    User user = userRepository.findById(storedToken.getOwnerId())
+      .orElseThrow(() -> {
+        log.error("Refresh token owner not found: user_id={}", storedToken.getOwnerId());
+        return new UnauthorizedException("Account not found");
+      });
+
+    if (user.getStatus() != UserStatus.ACTIVE) {
+      refreshTokenRepository.revokeAllByOwner(user.getUserId(), "user");
+      log.warn("Non-active user attempted refresh: userId={}, status={}",
+        user.getUserId(), user.getStatus());
+      throw new ForbiddenException("Your account is not active. Status: " + user.getStatus());
+    }
+
+    storedToken.setRevoked(true);
+    refreshTokenRepository.save(storedToken);
+
+    String newAccessToken = jwtUtil.generateAccessToken(
+      user.getUserId(),
+      user.getEmail(),
+      "USER",
+      "user"
+    );
+
+    String newRefreshToken = jwtUtil.generateRefreshToken(
+      user.getUserId(),
+      "user"
+    );
+
+    RefreshToken newTokenEntity = RefreshToken.builder()
+      .refreshToken(newRefreshToken)
+      .ownerId(user.getUserId())
+      .ownerType("user")
+      .ipAddress(clientIp)
+      .expiresAt(Instant.now().plusMillis(refreshTokenExpiry))
+      .build();
+
+    refreshTokenRepository.save(newTokenEntity);
+
+    log.info("Token refreshed for user: id={}, ip={}", user.getUserId(), clientIp);
+
+    return AuthResponse.builder()
+      .accessToken(newAccessToken)
+      .refreshToken(newRefreshToken)
+      .tokenType("Bearer")
+      .expiresIn(accessTokenExpiry)
+      .profile(buildUserProfile(user))
       .build();
 
   }

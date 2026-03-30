@@ -26,4 +26,7 @@ public interface UserAuthService {
   RegisterInitiateResponse resendOtp(RegisterResendRequest request);
 
   AuthResponse login(LoginRequest request, String clientIp);
+
+  AuthResponse refresh(String refreshToken, String clientIp);
+
 }

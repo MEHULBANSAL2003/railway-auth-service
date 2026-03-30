@@ -10,6 +10,7 @@ import com.railway.auth_service.dto.response.AuthResponse;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 import com.railway.auth_service.service.UserAuthService;
 import com.railway.common.dto.ApiResponse;
+import com.railway.common.exception.BadRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping(ApiConstants.USER_AUTH)
@@ -77,6 +80,22 @@ public class UserAuthController {
       return forwarded.split(",")[0].trim();
     }
     return request.getRemoteAddr();
+  }
+
+  @PostMapping(ApiConstants.USER_REFRESH)
+  public ResponseEntity<ApiResponse<AuthResponse>> refresh(
+    @RequestBody Map<String, String> request,
+    HttpServletRequest httpRequest) {
+
+    String refreshToken = request.get("refreshToken");
+    if (refreshToken == null || refreshToken.isBlank()) {
+      throw new BadRequestException("Refresh token is required");
+    }
+
+    String clientIp = extractClientIp(httpRequest);
+    AuthResponse response = userAuthService.refresh(refreshToken, clientIp);
+
+    return ResponseEntity.ok(ApiResponse.success(response));
   }
 
 }
