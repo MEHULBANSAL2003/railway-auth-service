@@ -80,7 +80,8 @@ public class UserAuthServiceImpl implements UserAuthService {
     // Without normalization, both pass the uniqueness check → duplicate accounts.
     String email = request.getEmail().trim().toLowerCase();
     String username = request.getUsername().trim().toLowerCase();
-    String phone = formatIndianPhone(request.getPhone());
+    String phone = request.getPhone().trim();
+    String fullPhone = formatIndianPhone(phone);
 
 
     // ── Step 2: Check uniqueness ──
@@ -121,13 +122,13 @@ public class UserAuthServiceImpl implements UserAuthService {
     registrationData.put("username", username);
     registrationData.put("fullName", request.getFullName().trim());
     registrationData.put("email", email);
-    registrationData.put("phone", phone);
+    registrationData.put("phone", phone);  // 10-digit for DB (phone column is length=10)
     registrationData.put("passwordHash", passwordHash);
 
     // ── Step 5: Generate OTP, store in Redis, send SMS ──
     // OtpService handles everything: generate → store → send.
     // Returns expiry time in seconds for frontend countdown.
-    int expirySeconds = otpService.generateAndStore(phone, registrationData);
+    int expirySeconds = otpService.generateAndStore(fullPhone, registrationData);
 
     log.info("Registration initiated for username: {}, phone: {}",
       username, maskPhone(phone));
@@ -135,7 +136,7 @@ public class UserAuthServiceImpl implements UserAuthService {
     // ── Step 6: Build response ──
     // Everything is backend-driven. Frontend reads these values
     // and renders accordingly (countdown timer, OTP input boxes).
-    String maskedPhone = maskPhone(phone);
+    String maskedPhone = maskPhone(fullPhone);
     return RegisterInitiateResponse.builder()
       .message("OTP sent to " + maskedPhone)
       .expiresInSeconds(expirySeconds)
@@ -172,8 +173,7 @@ public class UserAuthServiceImpl implements UserAuthService {
       .username(data.get("username"))
       .fullName(data.get("fullName"))
       .email(data.get("email"))
-      .countryCode(data.get("countryCode"))
-      .phone(data.get("phone"))
+      .phone(request.getPhone())
       .passwordHash(data.get("passwordHash"))
       .phoneVerified(true)
       .emailVerified(false)
