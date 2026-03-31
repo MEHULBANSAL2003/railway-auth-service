@@ -24,6 +24,7 @@ import com.railway.common.exception.ServiceException;
 import com.railway.common.exception.TooManyRequestsException;
 import com.railway.common.exception.UnauthorizedException;
 import com.railway.common.security.JwtUtil;
+import com.railway.common.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,9 +33,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Handles user registration flow: initiate → verify → resend.
@@ -63,6 +66,7 @@ public class UserAuthServiceImpl implements UserAuthService {
   private final LoginAttemptService loginAttemptService;
   private final DeviceInfoService deviceInfoService;
   private final UserMapper userMapper;
+  private final Optional<TokenBlacklistService> blacklistService;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -307,6 +311,10 @@ public class UserAuthServiceImpl implements UserAuthService {
     loginAttemptService.resetAttempts(user.getUserId());
 
     refreshTokenRepository.revokeAllByOwner(user.getUserId(), "user");
+
+    blacklistService.ifPresent(service ->
+      service.setCutoff("user", user.getUserId(), Duration.ofMillis(accessTokenExpiry))
+    );
 
     user.setLastLoginAt(Instant.now());
     user.setLastLoginIp(clientIp);
