@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.railway.auth_service.config.properties.OtpProperties;
+import com.railway.auth_service.service.email.EmailService;
 import com.railway.auth_service.service.sms.SmsService;
 import com.railway.common.exception.BadRequestException;
 import com.railway.common.exception.TooManyRequestsException;
@@ -13,6 +14,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -49,6 +51,10 @@ public class OtpService {
   private static final String OTP_KEY_PREFIX = "auth:register:otp:";
   private static final String COOLDOWN_KEY_PREFIX = "auth:register:cooldown:";
 
+  private static final String EMAIL_OTP_KEY_PREFIX = "auth:email:otp:";
+  private static final String EMAIL_COOLDOWN_KEY_PREFIX = "auth:email:cooldown:";
+  private static final String FIELD_USER_ID = "userId";
+
   /**
    * Keys used internally in the Redis map.
    * Constants avoid typos — "otp" vs "Otp" vs "OTP" bugs.
@@ -59,6 +65,7 @@ public class OtpService {
   private final StringRedisTemplate redisTemplate;
   private final ObjectMapper objectMapper;
   private final OtpProperties otpProperties;
+  private final EmailService emailService;
 
   /**
    * SecureRandom created once, reused for all OTP generations.
@@ -353,6 +360,172 @@ public class OtpService {
     if (redisTemplate.hasKey(redisKey)) {
       throw new BadRequestException("OTP already sent to this number. Please wait or use resend.");
     }
+  }
+
+
+  // ═══════════════════════════════════════════
+//  EMAIL OTP: GENERATE AND SEND
+// ═══════════════════════════════════════════
+
+  /**
+   * Generates OTP for email verification and sends it via email.
+   *
+   * @param email  user's email address
+   * @param userId user's DB ID (stored in Redis so verify step knows who to update)
+   * @return OTP expiry time in seconds
+   *
+   * Same logic as registration OTP but:
+   *   - Different Redis key prefix (auth:email:otp vs auth:register:otp)
+   *   - Stores userId instead of registration data (user already exists)
+   *   - Sends via EmailService instead of SmsService
+   */
+  public int generateAndSendEmailOtp(String email, Long userId) {
+
+    // Check cooldown
+    String cooldownKey = EMAIL_COOLDOWN_KEY_PREFIX + email;
+    if (redisTemplate.hasKey(cooldownKey)) {
+      Long remainingSeconds = redisTemplate.getExpire(cooldownKey, TimeUnit.SECONDS);
+      throw new TooManyRequestsException(
+        "Too many failed attempts. Try again in " + remainingSeconds + " seconds."
+      );
+    }
+
+    // Check if OTP already sent
+    String redisKey = EMAIL_OTP_KEY_PREFIX + email;
+    if (redisTemplate.hasKey(redisKey)) {
+      throw new BadRequestException("OTP already sent to this email. Please wait or use resend.");
+    }
+
+    String otp = generateOtp();
+
+    // Store minimal data — just OTP, attempts, and userId
+    Map<String, String> data = new HashMap<>();
+    data.put(FIELD_OTP, otp);
+    data.put(FIELD_ATTEMPTS, "0");
+    data.put(FIELD_USER_ID, String.valueOf(userId));
+
+    redisTemplate.opsForValue().set(redisKey, serialize(data), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+
+    // Send OTP via email
+    emailService.sendOtp(email, otp, "Verify your email - Railway Booking");
+
+    log.info("Email OTP sent to {}", maskEmail(email));
+
+    return otpProperties.getExpirySeconds();
+  }
+
+
+// ═══════════════════════════════════════════
+//  EMAIL OTP: VERIFY
+// ═══════════════════════════════════════════
+
+  /**
+   * Verifies email OTP and returns the userId.
+   *
+   * @param email user's email address
+   * @param otp   OTP entered by user
+   * @return userId of the verified user
+   */
+  public Long verifyEmailOtp(String email, String otp) {
+
+    String redisKey = EMAIL_OTP_KEY_PREFIX + email;
+    String jsonValue = redisTemplate.opsForValue().get(redisKey);
+
+    if (jsonValue == null) {
+      throw new BadRequestException("OTP expired or not found. Please request a new one.");
+    }
+
+    Map<String, String> storedData = deserialize(jsonValue);
+    int attempts = Integer.parseInt(storedData.get(FIELD_ATTEMPTS));
+
+    // Max attempts check
+    if (attempts >= otpProperties.getMaxAttempts()) {
+      // Set cooldown
+      String cooldownKey = EMAIL_COOLDOWN_KEY_PREFIX + email;
+      redisTemplate.opsForValue().set(
+        cooldownKey, "1", otpProperties.getCooldownSeconds(), TimeUnit.SECONDS
+      );
+      redisTemplate.delete(redisKey);
+
+      log.warn("Max email OTP attempts exceeded for: {}", maskEmail(email));
+      throw new TooManyRequestsException(
+        "Too many failed attempts. Try again in " + otpProperties.getCooldownSeconds() + " seconds."
+      );
+    }
+
+    // Compare OTP
+    String storedOtp = storedData.get(FIELD_OTP);
+
+    if (!storedOtp.equals(otp)) {
+      attempts++;
+      storedData.put(FIELD_ATTEMPTS, String.valueOf(attempts));
+
+      Long remainingTtl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+      if (remainingTtl != null && remainingTtl > 0) {
+        redisTemplate.opsForValue().set(redisKey, serialize(storedData), remainingTtl, TimeUnit.SECONDS);
+      }
+
+      int remaining = otpProperties.getMaxAttempts() - attempts;
+      log.warn("Invalid email OTP for: {}. {} attempts remaining", maskEmail(email), remaining);
+      throw new BadRequestException("Invalid OTP. " + remaining + " attempt(s) remaining.");
+    }
+
+    // OTP correct — clean up
+    redisTemplate.delete(redisKey);
+
+    Long userId = Long.parseLong(storedData.get(FIELD_USER_ID));
+    log.info("Email OTP verified for: {}", maskEmail(email));
+
+    return userId;
+  }
+
+
+// ═══════════════════════════════════════════
+//  EMAIL OTP: RESEND
+// ═══════════════════════════════════════════
+
+  /**
+   * Resends email OTP with new value and fresh TTL.
+   *
+   * @param email  user's email address
+   * @param userId user's DB ID
+   * @return OTP expiry time in seconds
+   */
+  public int resendEmailOtp(String email, Long userId) {
+
+    String redisKey = EMAIL_OTP_KEY_PREFIX + email;
+    String jsonValue = redisTemplate.opsForValue().get(redisKey);
+
+    if (jsonValue == null) {
+      throw new BadRequestException("No pending email verification. Please request a new OTP.");
+    }
+
+    String newOtp = generateOtp();
+
+    Map<String, String> storedData = deserialize(jsonValue);
+    storedData.put(FIELD_OTP, newOtp);
+    storedData.put(FIELD_ATTEMPTS, "0");
+
+    redisTemplate.opsForValue().set(redisKey, serialize(storedData), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+
+    emailService.sendOtp(email, newOtp, "Verify your email - Railway Booking");
+
+    log.info("Email OTP resent to {}", maskEmail(email));
+
+    return otpProperties.getExpirySeconds();
+  }
+
+  /**
+   * Masks email for logging.
+   * "mehul@gmail.com" → "me****@gmail.com"
+   */
+  private String maskEmail(String email) {
+    if (email == null || !email.contains("@")) return "****";
+    int atIndex = email.indexOf("@");
+    String local = email.substring(0, atIndex);
+    String domain = email.substring(atIndex);
+    if (local.length() <= 2) return local + "****" + domain;
+    return local.substring(0, 2) + "****" + domain;
   }
 
 

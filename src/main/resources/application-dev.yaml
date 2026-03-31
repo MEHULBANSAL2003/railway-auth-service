@@ -63,6 +63,11 @@ app:
       account-sid: ${TWILIO_ACCOUNT_SID}
       auth-token: ${TWILIO_AUTH_TOKEN}
       from-number: ${TWILIO_FROM_NUMBER}
+  email:
+    provider: ${EMAIL_PROVIDER}
+    resend:
+      api-key: ${RESEND_API_KEY}
+      from-address: ${RESEND_FROM_ADDRESS}
   otp:
     use-fixed: true
     fixed-value: 111111

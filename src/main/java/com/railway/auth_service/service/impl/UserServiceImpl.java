@@ -1,6 +1,8 @@
 package com.railway.auth_service.service.impl;
 
+import com.railway.auth_service.config.properties.OtpProperties;
 import com.railway.auth_service.dto.request.ChangePasswordRequest;
+import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 import com.railway.auth_service.dto.response.UserProfileResponse;
 import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.RefreshToken;
@@ -8,6 +10,7 @@ import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
 import com.railway.auth_service.service.UserService;
+import com.railway.auth_service.service.otp.OtpService;
 import com.railway.common.exception.BadRequestException;
 import com.railway.common.exception.ForbiddenException;
 import com.railway.common.exception.ResourceNotFoundException;
@@ -34,6 +37,8 @@ public class UserServiceImpl implements UserService {
   private final UserRepository userRepository;
   private final UserMapper userMapper;
   private final PasswordEncoder passwordEncoder;
+  private final OtpService otpService;
+  private final OtpProperties otpProperties;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -112,6 +117,85 @@ public class UserServiceImpl implements UserService {
     );
 
     log.info("Password changed for user: id={}", userId);
+  }
+
+
+  // ═══════════════════════════════════════════
+//  EMAIL VERIFICATION
+// ═══════════════════════════════════════════
+
+  @Override
+  public RegisterInitiateResponse sendEmailOtp(Long userId) {
+
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+    // Already verified — no need to send OTP
+    if (user.isEmailVerified()) {
+      throw new BadRequestException("Email is already verified");
+    }
+
+    int expirySeconds = otpService.generateAndSendEmailOtp(user.getEmail(), userId);
+
+    return RegisterInitiateResponse.builder()
+      .message("OTP sent to " + maskEmail(user.getEmail()))
+      .expiresInSeconds(expirySeconds)
+      .otpLength(otpProperties.getLength())
+      .build();
+  }
+
+  @Override
+  @Transactional
+  public void verifyEmailOtp(Long userId, String otp) {
+
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+    if (user.isEmailVerified()) {
+      throw new BadRequestException("Email is already verified");
+    }
+
+    // Verify OTP — returns userId from Redis (we verify it matches)
+    Long verifiedUserId = otpService.verifyEmailOtp(user.getEmail(), otp);
+
+    // Safety check — the OTP was generated for THIS user
+    if (!verifiedUserId.equals(userId)) {
+      throw new UnauthorizedException("OTP does not belong to this user");
+    }
+
+    // Update email verification status
+    user.setEmailVerified(true);
+    userRepository.save(user);
+
+    log.info("Email verified for userId={}", userId);
+  }
+
+  @Override
+  public RegisterInitiateResponse resendEmailOtp(Long userId) {
+
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+    if (user.isEmailVerified()) {
+      throw new BadRequestException("Email is already verified");
+    }
+
+    int expirySeconds = otpService.resendEmailOtp(user.getEmail(), userId);
+
+    return RegisterInitiateResponse.builder()
+      .message("OTP resent to " + maskEmail(user.getEmail()))
+      .expiresInSeconds(expirySeconds)
+      .otpLength(otpProperties.getLength())
+      .build();
+  }
+
+  private String maskEmail(String email) {
+    if (email == null || !email.contains("@")) return "****";
+    int atIndex = email.indexOf("@");
+    String local = email.substring(0, atIndex);
+    String domain = email.substring(atIndex);
+    if (local.length() <= 2) return local + "****" + domain;
+    return local.substring(0, 2) + "****" + domain;
   }
 
 }
