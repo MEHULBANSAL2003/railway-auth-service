@@ -5,6 +5,9 @@ import com.railway.auth_service.dto.request.LoginRequest;
 import com.railway.auth_service.dto.request.RegisterInitiateRequest;
 import com.railway.auth_service.dto.request.RegisterResendRequest;
 import com.railway.auth_service.dto.request.RegisterVerifyRequest;
+import com.railway.auth_service.dto.request.ResetPasswordInitiateRequest;
+import com.railway.auth_service.dto.request.ResetPasswordResendRequest;
+import com.railway.auth_service.dto.request.ResetPasswordVerifyRequest;
 import com.railway.auth_service.dto.response.AuthResponse;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 import com.railway.auth_service.dto.response.UserProfileResponse;
@@ -18,6 +21,7 @@ import com.railway.auth_service.service.UserAuthService;
 import com.railway.auth_service.service.device.DeviceInfoService;
 import com.railway.auth_service.service.login.LoginAttemptService;
 import com.railway.auth_service.service.otp.OtpService;
+import com.railway.common.exception.BadRequestException;
 import com.railway.common.exception.ConflictException;
 import com.railway.common.exception.ForbiddenException;
 import com.railway.common.exception.ServiceException;
@@ -446,8 +450,185 @@ public class UserAuthServiceImpl implements UserAuthService {
 
 
   // ═══════════════════════════════════════════
+  //  RESET PASSWORD
+  // ═══════════════════════════════════════════
+
+  @Override
+  public RegisterInitiateResponse initiatePasswordReset(ResetPasswordInitiateRequest request) {
+
+    String identifier = request.getIdentifier().trim().toLowerCase();
+
+    // Step 1: Find user by identifier
+    User user = findUserForReset(identifier);
+
+    // Step 2: Check user status
+    checkUserActiveForReset(user);
+
+    // Step 3: Determine OTP delivery channel
+    //   - username → phone
+    //   - phone   → phone
+    //   - email   → email (if verified), otherwise phone
+    String formattedPhone = formatIndianPhone(user.getPhone());
+    boolean identifierIsEmail = identifier.contains("@");
+    boolean sendToEmail = identifierIsEmail && user.isEmailVerified();
+
+    // Step 4: Send OTP
+    int expirySeconds = otpService.generateAndSendResetOtp(
+      formattedPhone, user.getEmail(), user.getUserId(), sendToEmail
+    );
+
+    // Step 5: Build response message with masked destination
+    String message = buildResetOtpMessage(user, identifierIsEmail, sendToEmail);
+
+    log.info("Password reset initiated for userId={}, channel={}",
+      user.getUserId(), sendToEmail ? "email" : "sms");
+
+    return RegisterInitiateResponse.builder()
+      .message(message)
+      .expiresInSeconds(expirySeconds)
+      .otpLength(otpProperties.getLength())
+      .build();
+  }
+
+  @Override
+  @Transactional
+  public void verifyPasswordReset(ResetPasswordVerifyRequest request) {
+
+    String identifier = request.getIdentifier().trim().toLowerCase();
+
+    // Step 1: Find user — needed to get phone for Redis key lookup
+    User user = findUserForReset(identifier);
+
+    // Step 2: Check user status
+    checkUserActiveForReset(user);
+
+    // Step 3: Verify OTP — returns userId from Redis
+    String formattedPhone = formatIndianPhone(user.getPhone());
+    Long verifiedUserId = otpService.verifyResetOtp(formattedPhone, request.getOtp().trim());
+
+    // Step 4: Safety check — the OTP was generated for THIS user
+    if (!verifiedUserId.equals(user.getUserId())) {
+      throw new UnauthorizedException("OTP does not belong to this user");
+    }
+
+    // Step 5: Ensure new password differs from current
+    if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+      throw new BadRequestException("New password must be different from the current password");
+    }
+
+    // Step 6: Update password
+    user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+    user.setPasswordChangeCount(user.getPasswordChangeCount() + 1);
+    user.setLastPasswordChangeAt(Instant.now());
+    userRepository.save(user);
+
+    // Step 7: Revoke all existing sessions — force re-login on all devices
+    refreshTokenRepository.revokeAllByOwner(user.getUserId(), "user");
+    blacklistService.ifPresent(service ->
+      service.setCutoff("user", user.getUserId(), Duration.ofMillis(accessTokenExpiry))
+    );
+
+    log.info("Password reset completed for userId={}", user.getUserId());
+  }
+
+  @Override
+  public RegisterInitiateResponse resendPasswordResetOtp(ResetPasswordResendRequest request) {
+
+    String identifier = request.getIdentifier().trim().toLowerCase();
+
+    // Step 1: Find user
+    User user = findUserForReset(identifier);
+
+    // Step 2: Check user status
+    checkUserActiveForReset(user);
+
+    // Step 3: Resend OTP (uses same channel as the original initiate)
+    String formattedPhone = formatIndianPhone(user.getPhone());
+    int expirySeconds = otpService.resendResetOtp(formattedPhone);
+
+    // Step 4: Build response message — read channel from Redis to get accurate info
+    String channel = otpService.getResetOtpChannel(formattedPhone);
+    boolean identifierIsEmail = identifier.contains("@");
+    boolean sentToEmail = "email".equals(channel);
+    String message = buildResetOtpMessage(user, identifierIsEmail, sentToEmail);
+
+    log.info("Password reset OTP resent for userId={}", user.getUserId());
+
+    return RegisterInitiateResponse.builder()
+      .message(message)
+      .expiresInSeconds(expirySeconds)
+      .otpLength(otpProperties.getLength())
+      .build();
+  }
+
+
+  // ═══════════════════════════════════════════
   //  PRIVATE HELPERS
   // ═══════════════════════════════════════════
+
+  /**
+   * Finds user by identifier for password reset.
+   * Unlike login's findUserByIdentifier, this gives descriptive errors
+   * since the user needs to know if their account exists to proceed.
+   */
+  private User findUserForReset(String identifier) {
+    if (identifier.contains("@")) {
+      return userRepository.findByEmail(identifier)
+        .orElseThrow(() -> new BadRequestException("No account found with this email"));
+    }
+    if (identifier.matches("^\\d{10}$")) {
+      return userRepository.findByPhone(identifier)
+        .orElseThrow(() -> new BadRequestException("No account found with this phone number"));
+    }
+    return userRepository.findByUsername(identifier)
+      .orElseThrow(() -> new BadRequestException("No account found with this username"));
+  }
+
+  /**
+   * Checks that user account is active for password reset.
+   * Non-active accounts cannot reset their password.
+   */
+  private void checkUserActiveForReset(User user) {
+    if (user.getStatus() != UserStatus.ACTIVE) {
+      String message = switch (user.getStatus()) {
+        case LOCKED -> "Your account is locked. Contact support to unlock it.";
+        case DISABLED -> "Your account has been disabled. Contact support.";
+        case SUSPENDED -> "Your account is suspended. Contact support.";
+        default -> "Your account is not active. Contact support.";
+      };
+      throw new ForbiddenException(message);
+    }
+  }
+
+  /**
+   * Builds the response message telling the user where the OTP was sent.
+   *
+   * Rules:
+   *   - Sent to email  → "OTP sent to me****@gmail.com"
+   *   - Sent to phone  → "OTP sent to ****3210"
+   *   - User entered email but sent to phone (email not verified)
+   *       → "OTP sent to ****3210 as your email is not verified"
+   */
+  private String buildResetOtpMessage(User user, boolean identifierIsEmail, boolean sentToEmail) {
+    if (sentToEmail) {
+      return "OTP sent to " + maskEmail(user.getEmail());
+    }
+
+    String maskedPhone = maskPhone(user.getPhone());
+    if (identifierIsEmail) {
+      return "OTP sent to " + maskedPhone + " as your email is not verified";
+    }
+    return "OTP sent to " + maskedPhone;
+  }
+
+  private String maskEmail(String email) {
+    if (email == null || !email.contains("@")) return "****";
+    int atIndex = email.indexOf("@");
+    String local = email.substring(0, atIndex);
+    String domain = email.substring(atIndex);
+    if (local.length() <= 2) return local + "****" + domain;
+    return local.substring(0, 2) + "****" + domain;
+  }
 
   /**
    * Prepends +91 country code to a 10-digit phone number.

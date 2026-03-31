@@ -4,6 +4,9 @@ import com.railway.auth_service.dto.request.LoginRequest;
 import com.railway.auth_service.dto.request.RegisterInitiateRequest;
 import com.railway.auth_service.dto.request.RegisterResendRequest;
 import com.railway.auth_service.dto.request.RegisterVerifyRequest;
+import com.railway.auth_service.dto.request.ResetPasswordInitiateRequest;
+import com.railway.auth_service.dto.request.ResetPasswordResendRequest;
+import com.railway.auth_service.dto.request.ResetPasswordVerifyRequest;
 import com.railway.auth_service.dto.response.AuthResponse;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 
@@ -28,5 +31,11 @@ public interface UserAuthService {
   AuthResponse login(LoginRequest request, String clientIp,String userAgent);
 
   AuthResponse refresh(String refreshToken, String clientIp);
+
+  RegisterInitiateResponse initiatePasswordReset(ResetPasswordInitiateRequest request);
+
+  void verifyPasswordReset(ResetPasswordVerifyRequest request);
+
+  RegisterInitiateResponse resendPasswordResetOtp(ResetPasswordResendRequest request);
 
 }

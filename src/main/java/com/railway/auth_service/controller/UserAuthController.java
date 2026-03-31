@@ -6,6 +6,9 @@ import com.railway.auth_service.dto.request.LoginRequest;
 import com.railway.auth_service.dto.request.RegisterInitiateRequest;
 import com.railway.auth_service.dto.request.RegisterResendRequest;
 import com.railway.auth_service.dto.request.RegisterVerifyRequest;
+import com.railway.auth_service.dto.request.ResetPasswordInitiateRequest;
+import com.railway.auth_service.dto.request.ResetPasswordResendRequest;
+import com.railway.auth_service.dto.request.ResetPasswordVerifyRequest;
 import com.railway.auth_service.dto.response.AuthResponse;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 import com.railway.auth_service.service.UserAuthService;
@@ -96,6 +99,36 @@ public class UserAuthController {
 
     String clientIp = extractClientIp(httpRequest);
     AuthResponse response = userAuthService.refresh(refreshToken, clientIp);
+
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+
+  // ── Reset Password ──
+
+  @PostMapping(ApiConstants.RESET_PASSWORD_INITIATE)
+  public ResponseEntity<ApiResponse<RegisterInitiateResponse>> initiatePasswordReset(
+    @Valid @RequestBody ResetPasswordInitiateRequest request) {
+
+    RegisterInitiateResponse response = userAuthService.initiatePasswordReset(request);
+
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PostMapping(ApiConstants.RESET_PASSWORD_VERIFY)
+  public ResponseEntity<ApiResponse<Void>> verifyPasswordReset(
+    @Valid @RequestBody ResetPasswordVerifyRequest request) {
+
+    userAuthService.verifyPasswordReset(request);
+
+    return ResponseEntity.ok(ApiResponse.success());
+  }
+
+  @PostMapping(ApiConstants.RESET_PASSWORD_RESEND)
+  public ResponseEntity<ApiResponse<RegisterInitiateResponse>> resendPasswordResetOtp(
+    @Valid @RequestBody ResetPasswordResendRequest request) {
+
+    RegisterInitiateResponse response = userAuthService.resendPasswordResetOtp(request);
 
     return ResponseEntity.ok(ApiResponse.success(response));
   }

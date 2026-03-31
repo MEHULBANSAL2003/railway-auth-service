@@ -59,6 +59,11 @@ public final class ApiConstants {
   public static final String VERFIY_EMAIL_OTP = "/email/verify-otp";
   public static final String RESEND_EMAIL_OTP = "/email/resend-otp";
 
+  // Reset password (public — no token needed)
+  public static final String RESET_PASSWORD_INITIATE = "/reset-password/initiate";
+  public static final String RESET_PASSWORD_VERIFY = "/reset-password/verify";
+  public static final String RESET_PASSWORD_RESEND = "/reset-password/resend";
+
 
   // ─────────────────────────────────────
   // Public paths (for SecurityConfig)

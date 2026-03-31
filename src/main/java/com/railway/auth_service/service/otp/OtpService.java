@@ -53,7 +53,13 @@ public class OtpService {
 
   private static final String EMAIL_OTP_KEY_PREFIX = "auth:email:otp:";
   private static final String EMAIL_COOLDOWN_KEY_PREFIX = "auth:email:cooldown:";
+
+  private static final String RESET_OTP_KEY_PREFIX = "auth:reset:otp:";
+  private static final String RESET_COOLDOWN_KEY_PREFIX = "auth:reset:cooldown:";
+
   private static final String FIELD_USER_ID = "userId";
+  private static final String FIELD_CHANNEL = "channel";
+  private static final String FIELD_TARGET_EMAIL = "targetEmail";
 
   /**
    * Keys used internally in the Redis map.
@@ -507,6 +513,183 @@ public class OtpService {
 
     return otpProperties.getExpirySeconds();
   }
+
+
+  // ═══════════════════════════════════════════
+  //  RESET PASSWORD OTP: GENERATE AND SEND
+  // ═══════════════════════════════════════════
+
+  /**
+   * Generates OTP for password reset and sends it via SMS or email.
+   *
+   * Redis key is always based on the user's phone (unique per user).
+   * The delivery channel (sms/email) is stored in Redis so resend
+   * uses the same channel.
+   *
+   * @param formattedPhone phone with country code (e.g. "+919876543210")
+   * @param email          user's email address
+   * @param userId         user's DB ID
+   * @param sendToEmail    true = deliver via email, false = deliver via SMS
+   * @return OTP expiry time in seconds
+   */
+  public int generateAndSendResetOtp(String formattedPhone, String email, Long userId, boolean sendToEmail) {
+
+    // Check cooldown
+    String cooldownKey = RESET_COOLDOWN_KEY_PREFIX + formattedPhone;
+    if (Boolean.TRUE.equals(redisTemplate.hasKey(cooldownKey))) {
+      Long remainingSeconds = redisTemplate.getExpire(cooldownKey, TimeUnit.SECONDS);
+      throw new TooManyRequestsException(
+        "Too many failed attempts. Try again in " + remainingSeconds + " seconds."
+      );
+    }
+
+    // Check if OTP already sent
+    String redisKey = RESET_OTP_KEY_PREFIX + formattedPhone;
+    if (Boolean.TRUE.equals(redisTemplate.hasKey(redisKey))) {
+      throw new BadRequestException("OTP already sent. Please wait or use resend.");
+    }
+
+    String otp = generateOtp();
+
+    // Send OTP BEFORE storing in Redis
+    if (sendToEmail) {
+      emailService.sendOtp(email, otp, "Reset your password - Railway Booking");
+    } else {
+      smsService.sendOtp(formattedPhone, otp);
+    }
+
+    // Delivery succeeded — now store in Redis
+    Map<String, String> data = new HashMap<>();
+    data.put(FIELD_OTP, otp);
+    data.put(FIELD_ATTEMPTS, "0");
+    data.put(FIELD_USER_ID, String.valueOf(userId));
+    data.put(FIELD_CHANNEL, sendToEmail ? "email" : "sms");
+    data.put(FIELD_TARGET_EMAIL, email);
+
+    redisTemplate.opsForValue().set(redisKey, serialize(data), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+
+    log.info("Reset password OTP sent via {} for phone: {}", sendToEmail ? "email" : "sms", maskPhone(formattedPhone));
+
+    return otpProperties.getExpirySeconds();
+  }
+
+
+  // ═══════════════════════════════════════════
+  //  RESET PASSWORD OTP: VERIFY
+  // ═══════════════════════════════════════════
+
+  /**
+   * Verifies reset password OTP and returns the userId.
+   *
+   * @param formattedPhone phone with country code (used as Redis key)
+   * @param otp            OTP entered by user
+   * @return userId from stored data
+   */
+  public Long verifyResetOtp(String formattedPhone, String otp) {
+
+    String redisKey = RESET_OTP_KEY_PREFIX + formattedPhone;
+    String jsonValue = redisTemplate.opsForValue().get(redisKey);
+
+    if (jsonValue == null) {
+      throw new BadRequestException("OTP expired or not found. Please request a new one.");
+    }
+
+    Map<String, String> storedData = deserialize(jsonValue);
+    int attempts = Integer.parseInt(storedData.get(FIELD_ATTEMPTS));
+
+    if (attempts >= otpProperties.getMaxAttempts()) {
+      String cooldownKey = RESET_COOLDOWN_KEY_PREFIX + formattedPhone;
+      redisTemplate.opsForValue().set(
+        cooldownKey, "1", otpProperties.getCooldownSeconds(), TimeUnit.SECONDS
+      );
+      redisTemplate.delete(redisKey);
+
+      log.warn("Max reset OTP attempts exceeded for phone: {}", maskPhone(formattedPhone));
+      throw new TooManyRequestsException("Too many failed attempts. Please try again later.");
+    }
+
+    String storedOtp = storedData.get(FIELD_OTP);
+
+    if (!storedOtp.equals(otp)) {
+      attempts++;
+      storedData.put(FIELD_ATTEMPTS, String.valueOf(attempts));
+
+      Long remainingTtl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+      if (remainingTtl != null && remainingTtl > 0) {
+        redisTemplate.opsForValue().set(redisKey, serialize(storedData), remainingTtl, TimeUnit.SECONDS);
+      }
+
+      int remaining = otpProperties.getMaxAttempts() - attempts;
+      log.warn("Invalid reset OTP for phone: {}. {} attempts remaining", maskPhone(formattedPhone), remaining);
+      throw new BadRequestException("Invalid OTP. " + remaining + " attempt(s) remaining.");
+    }
+
+    // OTP correct — clean up
+    redisTemplate.delete(redisKey);
+
+    Long userId = Long.parseLong(storedData.get(FIELD_USER_ID));
+    log.info("Reset password OTP verified for phone: {}", maskPhone(formattedPhone));
+
+    return userId;
+  }
+
+
+  // ═══════════════════════════════════════════
+  //  RESET PASSWORD OTP: RESEND
+  // ═══════════════════════════════════════════
+
+  /**
+   * Resends reset password OTP using the same delivery channel as the original.
+   *
+   * @param formattedPhone phone with country code (used as Redis key)
+   * @return OTP expiry time in seconds
+   */
+  public int resendResetOtp(String formattedPhone) {
+
+    String redisKey = RESET_OTP_KEY_PREFIX + formattedPhone;
+    String jsonValue = redisTemplate.opsForValue().get(redisKey);
+
+    if (jsonValue == null) {
+      throw new BadRequestException("No pending password reset found. Please initiate again.");
+    }
+
+    Map<String, String> storedData = deserialize(jsonValue);
+    String newOtp = generateOtp();
+    String channel = storedData.get(FIELD_CHANNEL);
+
+    // Send OTP BEFORE updating Redis — same channel as original
+    if ("email".equals(channel)) {
+      emailService.sendOtp(storedData.get(FIELD_TARGET_EMAIL), newOtp, "Reset your password - Railway Booking");
+    } else {
+      smsService.sendOtp(formattedPhone, newOtp);
+    }
+
+    // Delivery succeeded — now update Redis
+    storedData.put(FIELD_OTP, newOtp);
+    storedData.put(FIELD_ATTEMPTS, "0");
+
+    redisTemplate.opsForValue().set(redisKey, serialize(storedData), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+
+    log.info("Reset password OTP resent via {} for phone: {}", channel, maskPhone(formattedPhone));
+
+    return otpProperties.getExpirySeconds();
+  }
+
+  /**
+   * Returns the delivery channel for a pending reset OTP.
+   * Used by the service layer to build the correct response message on resend.
+   *
+   * @param formattedPhone phone with country code (used as Redis key)
+   * @return "sms" or "email", or null if no pending reset
+   */
+  public String getResetOtpChannel(String formattedPhone) {
+    String redisKey = RESET_OTP_KEY_PREFIX + formattedPhone;
+    String jsonValue = redisTemplate.opsForValue().get(redisKey);
+    if (jsonValue == null) return null;
+    Map<String, String> data = deserialize(jsonValue);
+    return data.get(FIELD_CHANNEL);
+  }
+
 
   /**
    * Masks email for logging.
