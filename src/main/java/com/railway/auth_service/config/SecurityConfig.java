@@ -69,6 +69,7 @@ public class SecurityConfig {
 
         // Admin endpoints — require authentication
         .requestMatchers("/api/admin/**").authenticated()
+        .requestMatchers("/api/user/**").authenticated()
 
         // Everything else requires authentication
         .anyRequest().authenticated()
