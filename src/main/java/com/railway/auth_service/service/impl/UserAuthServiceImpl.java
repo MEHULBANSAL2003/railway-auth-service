@@ -8,6 +8,7 @@ import com.railway.auth_service.dto.request.RegisterVerifyRequest;
 import com.railway.auth_service.dto.response.AuthResponse;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 import com.railway.auth_service.dto.response.UserProfileResponse;
+import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.RefreshToken;
 import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.model.enums.UserStatus;
@@ -61,6 +62,7 @@ public class UserAuthServiceImpl implements UserAuthService {
   private final RefreshTokenRepository refreshTokenRepository;
   private final LoginAttemptService loginAttemptService;
   private final DeviceInfoService deviceInfoService;
+  private final UserMapper userMapper;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -237,17 +239,7 @@ public class UserAuthServiceImpl implements UserAuthService {
     deviceInfoService.updateLoginMetadata(user.getUserId(), clientIp, userAgent);
 
     // ── Step 6: Build response ──
-    UserProfileResponse profile = UserProfileResponse.builder()
-      .userId(user.getUserId())
-      .username(user.getUsername())
-      .fullName(user.getFullName())
-      .email(user.getEmail())
-      .countryCode(user.getCountryCode())
-      .phone(user.getPhone())
-      .phoneVerified(user.isPhoneVerified())
-      .emailVerified(user.isEmailVerified())
-      .profileImageUrl(user.getProfileImageUrl())
-      .build();
+    UserProfileResponse profile = userMapper.toProfileResponse(user);
 
     return AuthResponse.builder()
       .accessToken(accessToken)
@@ -347,7 +339,7 @@ public class UserAuthServiceImpl implements UserAuthService {
     log.info("User logged in: id={}, identifier={}, ip={}",
       user.getUserId(), maskIdentifier(identifier), clientIp);
 
-    UserProfileResponse profile = buildUserProfile(user);
+    UserProfileResponse profile = userMapper.toProfileResponse(user);
 
     return AuthResponse.builder()
       .accessToken(accessToken)
@@ -432,12 +424,14 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     log.info("Token refreshed for user: id={}, ip={}", user.getUserId(), clientIp);
 
+    UserProfileResponse profile = userMapper.toProfileResponse(user);
+
     return AuthResponse.builder()
       .accessToken(newAccessToken)
       .refreshToken(newRefreshToken)
       .tokenType("Bearer")
       .expiresIn(accessTokenExpiry)
-      .profile(buildUserProfile(user))
+      .profile(profile)
       .build();
 
   }
@@ -479,19 +473,6 @@ public class UserAuthServiceImpl implements UserAuthService {
       .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
   }
 
-  private UserProfileResponse buildUserProfile(User user) {
-    return UserProfileResponse.builder()
-      .userId(user.getUserId())
-      .username(user.getUsername())
-      .fullName(user.getFullName())
-      .email(user.getEmail())
-      .countryCode(user.getCountryCode())
-      .phone(user.getPhone())
-      .phoneVerified(user.isPhoneVerified())
-      .emailVerified(user.isEmailVerified())
-      .profileImageUrl(user.getProfileImageUrl())
-      .build();
-  }
 
   private String maskIdentifier(String identifier) {
     if (identifier == null || identifier.length() < 4) return "****";
