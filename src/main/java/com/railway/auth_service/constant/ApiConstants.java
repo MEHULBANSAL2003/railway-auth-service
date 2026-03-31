@@ -45,14 +45,15 @@ public final class ApiConstants {
   public static final String ADMIN_TOGGLE_STATUS = "{adminId}/toggle-status";
   public static final String ADMIN_CHANGE_ROLE = "{adminId}/change-role";
  public static final String GET_MY_PROFILE = "/me";
+ public static final String GET_USER_PROFILE = "/{userId}";
 
   public static final String USER_AUTH = AUTH_BASE + "/user";
   public static final String USER_REGISTER = "/register/initiate";
   public static final String USER_OTP_VERIFY =  "/register/otp/verify";
   public static final String USER_RESEND_OTP =  "/register/otp/resend";
   public static final String USER_LOGIN =  "/login";
-  public static final String USER_REFRESH = USER_AUTH + "/refresh";
-  public static final String USER_LOGOUT = USER_AUTH + "/logout";
+  public static final String USER_REFRESH = "/refresh";
+  public static final String USER_LOGOUT = "/logout";
 
   // ─────────────────────────────────────
   // Public paths (for SecurityConfig)

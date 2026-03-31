@@ -4,6 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.Instant;
+import java.time.LocalDate;
+
 /**
  * User profile data returned after registration or login.
  *
@@ -32,4 +35,7 @@ public class UserProfileResponse implements ProfileResponse {
   private boolean phoneVerified;
   private boolean emailVerified;
   private String profileImageUrl;
+  private LocalDate dateOfBirth;
+  private String gender;
+  private Instant createdAt;
 }

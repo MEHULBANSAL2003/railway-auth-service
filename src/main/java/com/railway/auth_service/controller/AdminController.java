@@ -4,6 +4,7 @@ import com.railway.auth_service.constant.ApiConstants;
 import com.railway.auth_service.dto.request.CreateAdminRequest;
 import com.railway.auth_service.dto.request.RefreshRequest;
 import com.railway.auth_service.dto.response.AdminResponse;
+import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
 import com.railway.auth_service.service.AdminAuthService;
 import com.railway.auth_service.service.AdminService;
@@ -131,6 +132,16 @@ public class AdminController {
     @PathVariable Long adminId) {
 
     AdminResponse response = adminService.getAdminById(adminId);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @GetMapping(ApiConstants.GET_USER_PROFILE)
+  @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+  public ResponseEntity<ApiResponse<AdminUserDetailResponse>> getUserById(
+    @PathVariable Long userId) {
+
+    AdminUserDetailResponse response = adminService.getUserById(userId);
+
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 

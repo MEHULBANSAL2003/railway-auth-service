@@ -1,9 +1,14 @@
 package com.railway.auth_service.service.impl;
 
+import com.railway.auth_service.dto.response.UserProfileResponse;
+import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.RefreshToken;
+import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.repository.RefreshTokenRepository;
+import com.railway.auth_service.repository.UserRepository;
 import com.railway.auth_service.service.UserService;
 import com.railway.common.exception.ForbiddenException;
+import com.railway.common.exception.ResourceNotFoundException;
 import com.railway.common.exception.UnauthorizedException;
 import com.railway.common.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +27,8 @@ public class UserServiceImpl implements UserService {
 
   private final RefreshTokenRepository refreshTokenRepository;
   private final Optional<TokenBlacklistService> blacklistService;
+  private final UserRepository userRepository;
+  private final UserMapper userMapper;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -58,4 +65,14 @@ public class UserServiceImpl implements UserService {
       log.info("User logged out: user_id={}", userId);
     }
   }
+
+  @Override
+  public UserProfileResponse getMyProfile(Long userId) {
+
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+    return userMapper.toProfileResponse(user);
+  }
+
 }

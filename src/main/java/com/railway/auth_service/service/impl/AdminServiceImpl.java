@@ -2,12 +2,16 @@ package com.railway.auth_service.service.impl;
 
 import com.railway.auth_service.dto.request.CreateAdminRequest;
 import com.railway.auth_service.dto.response.AdminResponse;
+import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
 import com.railway.auth_service.mapper.AdminMapper;
+import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.Admin;
+import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.model.enums.AdminRole;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.repository.RefreshTokenRepository;
+import com.railway.auth_service.repository.UserRepository;
 import com.railway.auth_service.service.AdminService;
 import com.railway.common.dto.PagedResponse;
 import com.railway.common.exception.BadRequestException;
@@ -41,6 +45,8 @@ public class AdminServiceImpl implements AdminService {
   private final AdminMapper adminMapper;
   private final Optional<TokenBlacklistService> blacklistService;
   private final RefreshTokenRepository refreshTokenRepository;
+  private final UserRepository userRepository;
+  private final UserMapper userMapper;
 
   private static final String[] ALLOWED_SORT_FIELDS = {
     "createdAt", "email", "firstName", "department", "role", "lastLoginAt"
@@ -221,4 +227,15 @@ public class AdminServiceImpl implements AdminService {
 
     return PagedResponse.of(adminPage, adminMapper::toResponse);
   }
+
+  @Override
+  public AdminUserDetailResponse getUserById(Long userId) {
+
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+    return userMapper.toAdminDetailResponse(user);
+  }
+
+
 }

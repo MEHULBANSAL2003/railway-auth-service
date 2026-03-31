@@ -2,6 +2,7 @@ package com.railway.auth_service.service;
 
 import com.railway.auth_service.dto.request.CreateAdminRequest;
 import com.railway.auth_service.dto.response.AdminResponse;
+import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
 import com.railway.common.dto.PagedResponse;
 
@@ -25,4 +26,6 @@ public interface AdminService {
   AdminResponse getAdminById(Long adminId);
 
   AdminResponse getOwnProfile(Long adminId);
+
+  AdminUserDetailResponse getUserById(Long userId);
 }
