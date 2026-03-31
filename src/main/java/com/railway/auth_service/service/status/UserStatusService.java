@@ -9,7 +9,6 @@ import com.railway.common.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,12 +57,18 @@ public class UserStatusService {
       user.getUserId(), oldStatus, newStatus, changedByType, changedById);
   }
 
-  @Async("authAsyncExecutor")
+  /**
+   * Sets initial status for a newly registered user.
+   *
+   * NOT @Async — must run synchronously within the caller's transaction.
+   * The user row is being created in the same transaction, so:
+   *   1. user.setLastStatusChangeAt() must be flushed with the same transaction
+   *   2. history insert's FK (user_id) must find the user in the same transaction
+   *
+   * Uses logSync (not async log) because the user row hasn't been committed yet.
+   */
   public void setInitialActive(User user, String ipAddress) {
-    user.setLastStatusChangeAt(Instant.now());
-
-    // Different bean → @Async works ✓
-    historyLogger.log(user, null, UserStatus.ACTIVE,
+    historyLogger.logSync(user, null, UserStatus.ACTIVE,
       "Account created via registration",
       user.getUserId(), ActorType.USER, ipAddress);
   }
