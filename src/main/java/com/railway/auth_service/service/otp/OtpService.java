@@ -135,37 +135,31 @@ public class OtpService {
     String otp = generateOtp();
 
     /*
+     * Send SMS BEFORE storing in Redis.
+     *
+     * Why send first?
+     * If SMS fails (network error, Twilio down, invalid number),
+     * no Redis entry is created → user can retry immediately.
+     * If we stored in Redis first and SMS failed, user gets
+     * "OTP already sent" on retry but never received the OTP.
+     *
+     * phone already contains country code (e.g. "+919876543210")
+     * passed by caller via formatIndianPhone().
+     */
+    smsService.sendOtp(phone, otp);
+
+    /*
+     * SMS sent successfully — now store in Redis.
+     *
      * Add OTP and attempts counter to the registration data map.
-     *
-     * Why mutate the incoming map?
-     * The caller (UserAuthService) creates this map from validated
-     * request data. We add our fields to it. One map = one Redis value.
-     * Alternative: create a new map and copy everything — extra object,
-     * extra memory, no real benefit. KISS.
-     *
-     * Why store attempts as String "0" and not int?
      * StringRedisTemplate stores everything as strings.
      * Map<String, String> keeps it consistent. We parse to int when needed.
      */
     registrationData.put(FIELD_OTP, otp);
     registrationData.put(FIELD_ATTEMPTS, "0");
 
-    // Serialize map to JSON and store in Redis with TTL
     String jsonValue = serialize(registrationData);
     redisTemplate.opsForValue().set(redisKey, jsonValue, otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
-
-    /*
-     * Send SMS.
-     *
-     * Why after Redis store, not before?
-     * If SMS fails, we clean up the Redis key and throw.
-     * If we sent SMS first and Redis fails, user has OTP but we can't verify it.
-     * Redis store must succeed for the flow to work.
-     *
-     * phone already contains country code (e.g. "+919876543210")
-     * passed by caller via formatIndianPhone().
-     */
-    smsService.sendOtp(phone, otp);
 
     log.info("OTP generated and stored for phone: {}", maskPhone(phone));
 
@@ -329,26 +323,21 @@ public class OtpService {
     // Generate new OTP — old one is now invalid (overwritten)
     String newOtp = generateOtp();
 
+    // Send SMS BEFORE updating Redis.
+    // If SMS fails, old OTP remains valid in Redis — user can retry resend.
+    smsService.sendOtp(phone, newOtp);
+
     /*
-     * Update OTP and reset attempts.
+     * SMS sent successfully — now update Redis.
      *
-     * Why reset attempts to 0?
-     * New OTP = fresh start. The old OTP's failed attempts
-     * are irrelevant — user can't enter the old OTP anymore.
-     * 3 fresh attempts for the new OTP.
-     *
-     * Why fresh TTL (full expirySeconds)?
-     * User explicitly asked for a new OTP.
-     * Fair to give them a full 5-minute window.
-     * Unlike wrong attempts in verify (where TTL keeps shrinking).
+     * Reset attempts to 0: new OTP = fresh start.
+     * Fresh TTL: user explicitly asked for a new OTP,
+     * fair to give them a full window.
      */
     storedData.put(FIELD_OTP, newOtp);
     storedData.put(FIELD_ATTEMPTS, "0");
 
     redisTemplate.opsForValue().set(redisKey, serialize(storedData), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
-
-    // Send new OTP via SMS — phone already has country code
-    smsService.sendOtp(phone, newOtp);
 
     log.info("OTP resent for phone: {}", maskPhone(phone));
 
@@ -398,16 +387,17 @@ public class OtpService {
 
     String otp = generateOtp();
 
-    // Store minimal data — just OTP, attempts, and userId
+    // Send email BEFORE storing in Redis.
+    // If email fails, no Redis entry → user can retry immediately.
+    emailService.sendOtp(email, otp, "Verify your email - Railway Booking");
+
+    // Email sent successfully — now store in Redis
     Map<String, String> data = new HashMap<>();
     data.put(FIELD_OTP, otp);
     data.put(FIELD_ATTEMPTS, "0");
     data.put(FIELD_USER_ID, String.valueOf(userId));
 
     redisTemplate.opsForValue().set(redisKey, serialize(data), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
-
-    // Send OTP via email
-    emailService.sendOtp(email, otp, "Verify your email - Railway Booking");
 
     log.info("Email OTP sent to {}", maskEmail(email));
 
@@ -502,13 +492,16 @@ public class OtpService {
 
     String newOtp = generateOtp();
 
+    // Send email BEFORE updating Redis.
+    // If email fails, old OTP remains valid — user can retry resend.
+    emailService.sendOtp(email, newOtp, "Verify your email - Railway Booking");
+
+    // Email sent successfully — now update Redis
     Map<String, String> storedData = deserialize(jsonValue);
     storedData.put(FIELD_OTP, newOtp);
     storedData.put(FIELD_ATTEMPTS, "0");
 
     redisTemplate.opsForValue().set(redisKey, serialize(storedData), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
-
-    emailService.sendOtp(email, newOtp, "Verify your email - Railway Booking");
 
     log.info("Email OTP resent to {}", maskEmail(email));
 

@@ -1,6 +1,7 @@
 package com.railway.auth_service.service.email;
 
 import com.railway.auth_service.config.properties.EmailProperties;
+import com.railway.common.exception.ServiceException;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -115,13 +116,8 @@ public class ResendEmailService implements EmailService {
       log.info("OTP email sent to {}", maskEmail(to));
 
     } catch (Exception e) {
-      /*
-       * Same philosophy as TwilioSmsService:
-       * Log the failure, don't crash the flow.
-       * OTP is in Redis regardless — user can check console log in dev.
-       */
-      log.warn("Email delivery failed to {}. OTP: {} | Error: {}",
-        maskEmail(to), otp, e.getMessage());
+      log.error("Email delivery failed to {}. Error: {}", maskEmail(to), e.getMessage());
+      throw new ServiceException("Failed to send OTP email. Please try again later.");
     }
   }
 
