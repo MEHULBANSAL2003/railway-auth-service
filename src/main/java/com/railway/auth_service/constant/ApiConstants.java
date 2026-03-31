@@ -56,7 +56,7 @@ public final class ApiConstants {
   public static final String USER_LOGOUT = "/logout";
   public static final String USER_CHANGE_PASSWORD = "/change-password";
   public static final String SEND_EMAIL_OTP = "/email/send-otp";
-  public static final String VERFIY_EMAIL_OTP = "/email/resend-otp";
+  public static final String VERFIY_EMAIL_OTP = "/email/verify-otp";
   public static final String RESEND_EMAIL_OTP = "/email/resend-otp";
 
 
