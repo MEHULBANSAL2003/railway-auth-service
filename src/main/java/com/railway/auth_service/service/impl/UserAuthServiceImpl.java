@@ -14,6 +14,7 @@ import com.railway.auth_service.dto.response.UserProfileResponse;
 import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.RefreshToken;
 import com.railway.auth_service.model.entity.User;
+import com.railway.auth_service.model.enums.ActorType;
 import com.railway.auth_service.model.enums.UserStatus;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
@@ -21,6 +22,7 @@ import com.railway.auth_service.service.UserAuthService;
 import com.railway.auth_service.service.device.DeviceInfoService;
 import com.railway.auth_service.service.login.LoginAttemptService;
 import com.railway.auth_service.service.otp.OtpService;
+import com.railway.auth_service.service.status.UserStatusService;
 import com.railway.common.exception.BadRequestException;
 import com.railway.common.exception.ConflictException;
 import com.railway.common.exception.ForbiddenException;
@@ -71,6 +73,7 @@ public class UserAuthServiceImpl implements UserAuthService {
   private final DeviceInfoService deviceInfoService;
   private final UserMapper userMapper;
   private final Optional<TokenBlacklistService> blacklistService;
+  private final UserStatusService userStatusService;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -208,6 +211,7 @@ public class UserAuthServiceImpl implements UserAuthService {
     // catches 99.9% of cases. This catches the 0.1% race condition.
     try {
       user = userRepository.save(user);
+      userStatusService.setInitialActive(user, clientIp);
     } catch (DataIntegrityViolationException ex) {
       log.warn("Registration race condition — duplicate data: {}", ex.getMessage());
       throw new ConflictException("An account with this username, email, or phone already exists");
@@ -287,15 +291,33 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     User user = findUserByIdentifier(identifier);
 
-    if (user.getStatus() != UserStatus.ACTIVE) {
+    // Handle DEACTIVATED — auto-reactivate
+    boolean reactivated = false;
+
+    if (user.getStatus() == UserStatus.DEACTIVATED) {
+      // User is trying to login → they want their account back
+      // Auto-reactivate before proceeding with login
+      userStatusService.changeStatus(
+        user,
+        UserStatus.ACTIVE,
+        "User self-reactivated via login",
+        user.getUserId(),
+        ActorType.USER,
+        clientIp,
+        false    // don't kill sessions — there are none (they were killed at deactivation)
+      );
+      reactivated = true;
+
+    } else if (user.getStatus() != UserStatus.ACTIVE) {
+      // All other non-active statuses → reject login
       String message = switch (user.getStatus()) {
-        case LOCKED -> "Your account is locked. " +
-          (user.getStatusReason() != null ? user.getStatusReason() : "Contact support.");
+        case LOCKED -> "Your account is locked." +
+          (user.getStatusReason() != null ? " " + user.getStatusReason() : " Contact support.");
         case DISABLED -> "Your account has been disabled";
         case SUSPENDED -> "Your account is under review";
-        default -> throw new IllegalStateException("Unexpected value: " + user.getStatus());
+        case DELETED -> "Your account has been deleted";
+        default -> "Account not active";
       };
-
       throw new ForbiddenException(message);
     }
 
@@ -359,6 +381,7 @@ public class UserAuthServiceImpl implements UserAuthService {
       .tokenType("Bearer")
       .expiresIn(accessTokenExpiry)
       .profile(profile)
+      .reactivated(reactivated)
       .build();
 
   }

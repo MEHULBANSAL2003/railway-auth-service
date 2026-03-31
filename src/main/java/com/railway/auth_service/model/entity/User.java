@@ -77,6 +77,9 @@ public class User {
   @Builder.Default
   private UserStatus status = UserStatus.ACTIVE;
 
+  @Column(name = "last_status_change_at")
+  private Instant lastStatusChangeAt;
+
   @Column(name = "status_reason", length = 500)
   private String statusReason;
 

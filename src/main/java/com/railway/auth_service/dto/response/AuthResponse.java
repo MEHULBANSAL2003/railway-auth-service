@@ -63,4 +63,7 @@ public class AuthResponse {
    * is excluded from JSON (e.g., token refresh returns no profile).
    */
   private ProfileResponse profile;
+
+  @Builder.Default
+  private boolean reactivated = false;
 }

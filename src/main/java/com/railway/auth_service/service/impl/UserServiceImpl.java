@@ -7,10 +7,13 @@ import com.railway.auth_service.dto.response.UserProfileResponse;
 import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.RefreshToken;
 import com.railway.auth_service.model.entity.User;
+import com.railway.auth_service.model.enums.ActorType;
+import com.railway.auth_service.model.enums.UserStatus;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
 import com.railway.auth_service.service.UserService;
 import com.railway.auth_service.service.otp.OtpService;
+import com.railway.auth_service.service.status.UserStatusService;
 import com.railway.common.exception.BadRequestException;
 import com.railway.common.exception.ForbiddenException;
 import com.railway.common.exception.ResourceNotFoundException;
@@ -39,6 +42,7 @@ public class UserServiceImpl implements UserService {
   private final PasswordEncoder passwordEncoder;
   private final OtpService otpService;
   private final OtpProperties otpProperties;
+  private final UserStatusService userStatusService;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -197,5 +201,38 @@ public class UserServiceImpl implements UserService {
     if (local.length() <= 2) return local + "****" + domain;
     return local.substring(0, 2) + "****" + domain;
   }
+
+  @Override
+  @Transactional
+  public void deactivate(Long userId, String password, String ipAddress) {
+
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+    // Can only deactivate an ACTIVE account
+    if (user.getStatus() != UserStatus.ACTIVE) {
+      throw new BadRequestException("Account is not active. Current status: " + user.getStatus());
+    }
+
+    // Verify password — prevent accidental or unauthorized deactivation
+    if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+      throw new UnauthorizedException("Incorrect password");
+    }
+
+    // Change status — kills sessions + logs history async
+    userStatusService.changeStatus(
+      user,
+      UserStatus.DEACTIVATED,
+      "User requested deactivation",
+      userId,
+      ActorType.USER,
+      ipAddress,
+      true    // kill sessions
+    );
+
+    log.info("User deactivated: userId={}", userId);
+  }
+
+
 
 }

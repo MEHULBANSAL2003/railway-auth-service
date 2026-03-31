@@ -17,4 +17,6 @@ public interface UserService {
   void verifyEmailOtp(Long userId, String otp);
 
   RegisterInitiateResponse resendEmailOtp(Long userId);
+
+  void deactivate(Long userId, String password, String ipAddress);
 }

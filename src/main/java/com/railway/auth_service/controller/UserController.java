@@ -2,6 +2,7 @@ package com.railway.auth_service.controller;
 
 import com.railway.auth_service.constant.ApiConstants;
 import com.railway.auth_service.dto.request.ChangePasswordRequest;
+import com.railway.auth_service.dto.request.DeactivateRequest;
 import com.railway.auth_service.dto.request.RefreshRequest;
 import com.railway.auth_service.dto.request.VerifyEmailOtpRequest;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
@@ -9,6 +10,7 @@ import com.railway.auth_service.dto.response.UserProfileResponse;
 import com.railway.auth_service.service.UserService;
 import com.railway.common.dto.ApiResponse;
 import com.railway.common.security.AuthPrincipal;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -95,6 +97,30 @@ public class UserController {
     RegisterInitiateResponse response = userService.resendEmailOtp(principal.getId());
 
     return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PostMapping("/deactivate")
+  public ResponseEntity<ApiResponse<Void>> deactivate(
+    @Valid @RequestBody DeactivateRequest request,
+    @AuthenticationPrincipal AuthPrincipal principal,
+    HttpServletRequest httpRequest) {
+
+    String clientIp = extractClientIp(httpRequest);
+    userService.deactivate(principal.getId(), request.getPassword(), clientIp);
+
+    return ResponseEntity.ok(ApiResponse.success());
+  }
+
+  private String extractClientIp(HttpServletRequest request) {
+    String forwarded = request.getHeader("X-Forwarded-For");
+    if (forwarded != null && !forwarded.isBlank()) {
+      return forwarded.split(",")[0].trim();
+    }
+    String ip = request.getRemoteAddr();
+    if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
+      return "127.0.0.1";
+    }
+    return ip;
   }
 
 
