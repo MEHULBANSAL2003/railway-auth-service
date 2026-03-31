@@ -58,7 +58,7 @@ public class UserController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-  @PutMapping(ApiConstants.USER_CHANGE_PASSWORD)
+  @PostMapping(ApiConstants.USER_CHANGE_PASSWORD)
   public ResponseEntity<ApiResponse<Void>> changePassword(
     @Valid @RequestBody ChangePasswordRequest request,
     @AuthenticationPrincipal AuthPrincipal principal) {
