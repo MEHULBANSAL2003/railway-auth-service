@@ -63,6 +63,8 @@ public class UserMapper {
       .profileImageUrl(user.getProfileImageUrl())
       .dateOfBirth(user.getDateOfBirth())
       .gender(user.getGender())
+      .passwordChangeCount(user.getPasswordChangeCount())
+      .lastPasswordChangeAt(user.getLastPasswordChangeAt())
       .createdAt(user.getCreatedAt())
       .updatedAt(user.getUpdatedAt())
       .build();

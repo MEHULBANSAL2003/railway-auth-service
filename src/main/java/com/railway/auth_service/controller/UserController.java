@@ -1,6 +1,7 @@
 package com.railway.auth_service.controller;
 
 import com.railway.auth_service.constant.ApiConstants;
+import com.railway.auth_service.dto.request.ChangePasswordRequest;
 import com.railway.auth_service.dto.request.RefreshRequest;
 import com.railway.auth_service.dto.response.UserProfileResponse;
 import com.railway.auth_service.service.UserService;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -52,5 +54,16 @@ public class UserController {
     @AuthenticationPrincipal AuthPrincipal principal) {
     UserProfileResponse response = userService.getMyProfile(principal.getId());
     return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PutMapping(ApiConstants.USER_CHANGE_PASSWORD)
+  public ResponseEntity<ApiResponse<Void>> changePassword(
+    @Valid @RequestBody ChangePasswordRequest request,
+    @AuthenticationPrincipal AuthPrincipal principal) {
+
+    log.info("Password change request: user_id={}", principal.getId());
+    userService.changePassword(principal.getId(), request);
+
+    return ResponseEntity.ok(ApiResponse.success());
   }
 }

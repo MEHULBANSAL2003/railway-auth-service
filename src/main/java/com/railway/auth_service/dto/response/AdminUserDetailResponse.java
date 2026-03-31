@@ -48,6 +48,10 @@ public class AdminUserDetailResponse {
   private LocalDate dateOfBirth;
   private String gender;
 
+  // ── Password Change Tracking ──
+  private int passwordChangeCount;
+  private Instant lastPasswordChangeAt;
+
   // ── Timestamps ──
   private Instant createdAt;
   private Instant updatedAt;

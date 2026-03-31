@@ -54,6 +54,7 @@ public final class ApiConstants {
   public static final String USER_LOGIN =  "/login";
   public static final String USER_REFRESH = "/refresh";
   public static final String USER_LOGOUT = "/logout";
+  public static final String USER_CHANGE_PASSWORD = "/change-password";
 
   // ─────────────────────────────────────
   // Public paths (for SecurityConfig)

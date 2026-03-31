@@ -1,5 +1,6 @@
 package com.railway.auth_service.service.impl;
 
+import com.railway.auth_service.dto.request.ChangePasswordRequest;
 import com.railway.auth_service.dto.response.UserProfileResponse;
 import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.RefreshToken;
@@ -7,6 +8,7 @@ import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
 import com.railway.auth_service.service.UserService;
+import com.railway.common.exception.BadRequestException;
 import com.railway.common.exception.ForbiddenException;
 import com.railway.common.exception.ResourceNotFoundException;
 import com.railway.common.exception.UnauthorizedException;
@@ -14,10 +16,12 @@ import com.railway.common.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 @Slf4j
@@ -29,6 +33,7 @@ public class UserServiceImpl implements UserService {
   private final Optional<TokenBlacklistService> blacklistService;
   private final UserRepository userRepository;
   private final UserMapper userMapper;
+  private final PasswordEncoder passwordEncoder;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -73,6 +78,40 @@ public class UserServiceImpl implements UserService {
       .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
     return userMapper.toProfileResponse(user);
+  }
+
+  @Override
+  @Transactional
+  public void changePassword(Long userId, ChangePasswordRequest request) {
+
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+    // Verify current password
+    if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+      throw new BadRequestException("Current password is incorrect");
+    }
+
+    // Prevent setting the same password
+    if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+      throw new BadRequestException("New password must be different from the current password");
+    }
+
+    // Update password and tracking fields
+    user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+    user.setPasswordChangeCount(user.getPasswordChangeCount() + 1);
+    user.setLastPasswordChangeAt(Instant.now());
+    userRepository.save(user);
+
+    // Revoke all refresh tokens — force re-login on all devices
+    refreshTokenRepository.revokeAllByOwner(userId, "user");
+
+    // Blacklist current access tokens
+    blacklistService.ifPresent(service ->
+      service.setCutoff("user", userId, Duration.ofMillis(accessTokenExpiry))
+    );
+
+    log.info("Password changed for user: id={}", userId);
   }
 
 }

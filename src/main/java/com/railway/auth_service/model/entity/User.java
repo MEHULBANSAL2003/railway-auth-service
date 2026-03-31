@@ -110,6 +110,15 @@ public class User {
   @Column(name = "last_login_country", length = 100)
   private String lastLoginCountry;
 
+  // ── Password Change Tracking ──
+
+  @Column(name = "password_change_count", nullable = false)
+  @Builder.Default
+  private int passwordChangeCount = 0;
+
+  @Column(name = "last_password_change_at")
+  private Instant lastPasswordChangeAt;
+
   // ── Profile (optional) ──
 
   @Column(name = "profile_image_url", length = 500)
