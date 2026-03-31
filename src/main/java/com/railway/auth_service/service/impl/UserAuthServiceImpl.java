@@ -14,6 +14,7 @@ import com.railway.auth_service.model.enums.UserStatus;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
 import com.railway.auth_service.service.UserAuthService;
+import com.railway.auth_service.service.device.DeviceInfoService;
 import com.railway.auth_service.service.login.LoginAttemptService;
 import com.railway.auth_service.service.otp.OtpService;
 import com.railway.common.exception.ConflictException;
@@ -59,6 +60,7 @@ public class UserAuthServiceImpl implements UserAuthService {
   private final JwtUtil jwtUtil;
   private final RefreshTokenRepository refreshTokenRepository;
   private final LoginAttemptService loginAttemptService;
+  private final DeviceInfoService deviceInfoService;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -153,7 +155,7 @@ public class UserAuthServiceImpl implements UserAuthService {
 
   @Override
   @Transactional
-  public AuthResponse verifyRegistration(RegisterVerifyRequest request, String clientIp) {
+  public AuthResponse verifyRegistration(RegisterVerifyRequest request, String clientIp, String userAgent) {
 
     // ── Step 1: Verify OTP and get stored data ──
     // OtpService handles: fetch from Redis → check attempts → compare OTP.
@@ -232,6 +234,8 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     refreshTokenRepository.save(refreshTokenEntity);
 
+    deviceInfoService.updateLoginMetadata(user.getUserId(), clientIp, userAgent);
+
     // ── Step 6: Build response ──
     UserProfileResponse profile = UserProfileResponse.builder()
       .userId(user.getUserId())
@@ -278,7 +282,7 @@ public class UserAuthServiceImpl implements UserAuthService {
 
   @Override
   @Transactional
-  public AuthResponse login(LoginRequest request, String clientIp) {
+  public AuthResponse login(LoginRequest request, String clientIp,String userAgent) {
     String identifier = request.getIdentifier().trim().toLowerCase();
 
     User user = findUserByIdentifier(identifier);
@@ -337,6 +341,8 @@ public class UserAuthServiceImpl implements UserAuthService {
       .build();
 
     refreshTokenRepository.save(refreshTokenEntity);
+
+    deviceInfoService.updateLoginMetadata(user.getUserId(), clientIp, userAgent);
 
     log.info("User logged in: id={}, identifier={}, ip={}",
       user.getUserId(), maskIdentifier(identifier), clientIp);

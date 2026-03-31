@@ -21,11 +21,11 @@ public interface UserAuthService {
 
   RegisterInitiateResponse initiateRegistration(RegisterInitiateRequest request);
 
-  AuthResponse verifyRegistration(RegisterVerifyRequest request, String clientIp);
+  AuthResponse verifyRegistration(RegisterVerifyRequest request, String clientIp,String userAgent);
 
   RegisterInitiateResponse resendOtp(RegisterResendRequest request);
 
-  AuthResponse login(LoginRequest request, String clientIp);
+  AuthResponse login(LoginRequest request, String clientIp,String userAgent);
 
   AuthResponse refresh(String refreshToken, String clientIp);
 

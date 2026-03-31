@@ -47,7 +47,8 @@ public class UserAuthController {
     HttpServletRequest httpRequest) {
 
     String clientIp = extractClientIp(httpRequest);
-    AuthResponse response = userAuthService.verifyRegistration(request, clientIp);
+    String userAgent = httpRequest.getHeader("User-Agent");
+    AuthResponse response = userAuthService.verifyRegistration(request, clientIp, userAgent);
 
     return ResponseEntity.status(HttpStatus.CREATED)
       .body(ApiResponse.success(response));
@@ -69,7 +70,8 @@ public class UserAuthController {
     HttpServletRequest httpRequest) {
 
     String clientIp = extractClientIp(httpRequest);
-    AuthResponse response = userAuthService.login(request, clientIp);
+    String userAgent = httpRequest.getHeader("User-Agent");
+    AuthResponse response = userAuthService.login(request, clientIp, userAgent);
 
     return ResponseEntity.ok(ApiResponse.success(response));
   }

@@ -77,6 +77,13 @@
       <artifactId>google-http-client</artifactId>
       <version>1.42.0</version>
     </dependency>
+
+    <dependency>
+      <groupId>com.github.ua-parser</groupId>
+      <artifactId>uap-java</artifactId>
+      <version>1.6.1</version>
+    </dependency>
+
   </dependencies>
 
   <build>
