@@ -6,6 +6,7 @@ import com.railway.auth_service.dto.request.RefreshRequest;
 import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
+import com.railway.auth_service.dto.response.UserStatusHistoryResponse;
 import com.railway.auth_service.service.AdminAuthService;
 import com.railway.auth_service.service.AdminService;
 import com.railway.common.dto.ApiResponse;
@@ -141,6 +142,25 @@ public class AdminController {
     @PathVariable Long userId) {
 
     AdminUserDetailResponse response = adminService.getUserById(userId);
+
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @GetMapping(ApiConstants.USER_STATUS_HISTORY)
+  @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+  public ResponseEntity<ApiResponse<PagedResponse<UserStatusHistoryResponse>>> getUserStatusHistory(
+    @PathVariable Long userId,
+    @RequestParam(required = false) Integer page,
+    @RequestParam(required = false) Integer size,
+    @RequestParam(required = false) String sortBy,
+    @RequestParam(required = false) String sortDir,
+    @RequestParam(required = false) Long adminId) {
+
+    log.info("Get user status history: userId={}, page={}, size={}, sortBy={}, adminId={}",
+      userId, page, size, sortBy, adminId);
+
+    PagedResponse<UserStatusHistoryResponse> response = adminService.getUserStatusHistory(
+      userId, page, size, sortBy, sortDir, adminId);
 
     return ResponseEntity.ok(ApiResponse.success(response));
   }

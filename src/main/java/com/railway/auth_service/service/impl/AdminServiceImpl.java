@@ -4,14 +4,17 @@ import com.railway.auth_service.dto.request.CreateAdminRequest;
 import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
+import com.railway.auth_service.dto.response.UserStatusHistoryResponse;
 import com.railway.auth_service.mapper.AdminMapper;
 import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.Admin;
 import com.railway.auth_service.model.entity.User;
+import com.railway.auth_service.model.entity.UserStatusHistory;
 import com.railway.auth_service.model.enums.AdminRole;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
+import com.railway.auth_service.repository.UserStatusHistoryRepository;
 import com.railway.auth_service.service.AdminService;
 import com.railway.common.dto.PagedResponse;
 import com.railway.common.exception.BadRequestException;
@@ -47,9 +50,14 @@ public class AdminServiceImpl implements AdminService {
   private final RefreshTokenRepository refreshTokenRepository;
   private final UserRepository userRepository;
   private final UserMapper userMapper;
+  private final UserStatusHistoryRepository statusHistoryRepository;
 
   private static final String[] ALLOWED_SORT_FIELDS = {
     "createdAt", "email", "firstName", "department", "role", "lastLoginAt"
+  };
+
+  private static final String[] ALLOWED_HISTORY_SORT_FIELDS = {
+    "changedAt", "userId", "oldStatus", "newStatus", "changedById"
   };
 
   @Value("${app.jwt.access-token-expiry}")
@@ -235,6 +243,65 @@ public class AdminServiceImpl implements AdminService {
       .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
     return userMapper.toAdminDetailResponse(user);
+  }
+
+  /**
+   * Get status history for a specific user with pagination, sorting, and optional filtering by adminId.
+   *
+   * Efficient query design:
+   * - Uses indexed columns (user_id, changed_at, changed_by_id)
+   * - LEFT JOIN FETCH prevents N+1 queries by eagerly loading user data
+   * - Pagination limits memory usage for large result sets
+   * - Optional adminId filter to see changes made by specific admin
+   *
+   * Use cases:
+   * - View status change timeline on user profile page
+   * - Track who changed user status and when
+   * - Filter to see changes made by specific admin
+   * - Audit trail for specific user
+   */
+  @Override
+  @Transactional(readOnly = true)
+  public PagedResponse<UserStatusHistoryResponse> getUserStatusHistory(Long userId, Integer page, Integer size,
+                                                                        String sortBy, String sortDir,
+                                                                        Long adminId) {
+
+    // Verify user exists
+    if (!userRepository.existsById(userId)) {
+      throw new ResourceNotFoundException("User", "id", userId);
+    }
+
+    Pageable pageable = PaginationUtil.buildPageable(page, size, sortBy, sortDir, ALLOWED_HISTORY_SORT_FIELDS);
+
+    Page<UserStatusHistory> historyPage = statusHistoryRepository.findByUserIdWithFilters(userId, adminId, pageable);
+
+    // Map to response DTO with admin names resolved
+    return PagedResponse.of(historyPage, history -> {
+      String changedByName = null;
+      if (history.getChangedById() != null) {
+        changedByName = adminRepository.findById(history.getChangedById())
+          .map(admin -> admin.getFirstName() + " " +
+            (admin.getLastName() != null ? admin.getLastName() : ""))
+          .orElse("Unknown");
+      }
+
+      User user = history.getUser();
+
+      return UserStatusHistoryResponse.builder()
+        .id(history.getId())
+        .userId(user.getUserId())
+        .username(user.getUsername())
+        .userFullName(user.getFullName())
+        .oldStatus(history.getOldStatus())
+        .newStatus(history.getNewStatus())
+        .reason(history.getReason())
+        .changedById(history.getChangedById())
+        .changedByName(changedByName)
+        .changedByType(history.getChangedByType())
+        .ipAddress(history.getIpAddress())
+        .changedAt(history.getChangedAt())
+        .build();
+    });
   }
 
 

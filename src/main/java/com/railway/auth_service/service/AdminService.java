@@ -4,6 +4,7 @@ import com.railway.auth_service.dto.request.CreateAdminRequest;
 import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
+import com.railway.auth_service.dto.response.UserStatusHistoryResponse;
 import com.railway.common.dto.PagedResponse;
 
 import java.util.Map;
@@ -28,4 +29,8 @@ public interface AdminService {
   AdminResponse getOwnProfile(Long adminId);
 
   AdminUserDetailResponse getUserById(Long userId);
+
+  PagedResponse<UserStatusHistoryResponse> getUserStatusHistory(Long userId, Integer page, Integer size,
+                                                                 String sortBy, String sortDir,
+                                                                 Long adminId);
 }
