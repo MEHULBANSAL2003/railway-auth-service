@@ -12,6 +12,7 @@ import com.railway.auth_service.model.entity.Admin;
 import com.railway.auth_service.model.entity.RefreshToken;
 import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.model.entity.UserStatusHistory;
+import com.railway.auth_service.model.enums.ActorType;
 import com.railway.auth_service.model.enums.AdminRole;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.repository.RefreshTokenRepository;
@@ -281,7 +282,9 @@ public class AdminServiceImpl implements AdminService {
     // Map to response DTO with admin names resolved
     return PagedResponse.of(historyPage, history -> {
       String changedByName = null;
-      if (history.getChangedById() != null) {
+      if (history.getChangedByType() == ActorType.USER) {
+        changedByName = "SELF";
+      } else if (history.getChangedById() != null) {
         changedByName = adminRepository.findById(history.getChangedById())
           .map(admin -> admin.getFirstName() + " " +
             (admin.getLastName() != null ? admin.getLastName() : ""))
