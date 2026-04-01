@@ -23,4 +23,5 @@ public class RegisterInitiateResponse {
   private String message;
   private int expiresInSeconds;
   private int otpLength;
+  private int resendCooldownSeconds;
 }

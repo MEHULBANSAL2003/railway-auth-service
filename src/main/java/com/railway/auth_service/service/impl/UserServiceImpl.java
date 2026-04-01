@@ -145,6 +145,7 @@ public class UserServiceImpl implements UserService {
       .message("OTP sent to " + maskEmail(user.getEmail()))
       .expiresInSeconds(expirySeconds)
       .otpLength(otpProperties.getLength())
+      .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
       .build();
   }
 
@@ -190,6 +191,7 @@ public class UserServiceImpl implements UserService {
       .message("OTP resent to " + maskEmail(user.getEmail()))
       .expiresInSeconds(expirySeconds)
       .otpLength(otpProperties.getLength())
+      .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
       .build();
   }
 

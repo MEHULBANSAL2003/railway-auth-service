@@ -158,6 +158,7 @@ public class UserAuthServiceImpl implements UserAuthService {
       .message("OTP sent to " + maskedPhone)
       .expiresInSeconds(expirySeconds)
       .otpLength(otpProperties.getLength())
+      .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
       .build();
   }
 
@@ -281,6 +282,7 @@ public class UserAuthServiceImpl implements UserAuthService {
       .message("OTP resent successfully")
       .expiresInSeconds(expirySeconds)
       .otpLength(otpProperties.getLength())
+      .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
       .build();
   }
 
@@ -510,6 +512,7 @@ public class UserAuthServiceImpl implements UserAuthService {
       .message(message)
       .expiresInSeconds(expirySeconds)
       .otpLength(otpProperties.getLength())
+      .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
       .build();
   }
 
@@ -581,6 +584,7 @@ public class UserAuthServiceImpl implements UserAuthService {
       .message(message)
       .expiresInSeconds(expirySeconds)
       .otpLength(otpProperties.getLength())
+      .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
       .build();
   }
 
