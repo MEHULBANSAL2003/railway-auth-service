@@ -3,6 +3,7 @@ package com.railway.auth_service.controller;
 import com.railway.auth_service.constant.ApiConstants;
 import com.railway.auth_service.dto.request.CreateAdminRequest;
 import com.railway.auth_service.dto.request.RefreshRequest;
+import com.railway.auth_service.dto.response.ActiveSessionResponse;
 import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
@@ -124,6 +125,15 @@ public class AdminController {
     @AuthenticationPrincipal AuthPrincipal principal) {
 
     AdminResponse response = adminService.getOwnProfile(principal.getId());
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @GetMapping(ApiConstants.GET_MY_SESSION)
+  public ResponseEntity<ApiResponse<ActiveSessionResponse>> getActiveSession(
+    @AuthenticationPrincipal AuthPrincipal principal) {
+
+    log.info("Get active session: admin_id={}", principal.getId());
+    ActiveSessionResponse response = adminService.getActiveSession(principal.getId());
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 

@@ -1,6 +1,7 @@
 package com.railway.auth_service.service.impl;
 
 import com.railway.auth_service.dto.request.CreateAdminRequest;
+import com.railway.auth_service.dto.response.ActiveSessionResponse;
 import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
@@ -8,6 +9,7 @@ import com.railway.auth_service.dto.response.UserStatusHistoryResponse;
 import com.railway.auth_service.mapper.AdminMapper;
 import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.Admin;
+import com.railway.auth_service.model.entity.RefreshToken;
 import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.model.entity.UserStatusHistory;
 import com.railway.auth_service.model.enums.AdminRole;
@@ -35,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -304,5 +307,22 @@ public class AdminServiceImpl implements AdminService {
     });
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public ActiveSessionResponse getActiveSession(Long adminId) {
+
+    RefreshToken token = refreshTokenRepository
+      .findActiveToken(adminId, "admin", Instant.now())
+      .orElseThrow(() -> new ResourceNotFoundException("ActiveSession", "adminId", adminId));
+
+    return ActiveSessionResponse.builder()
+      .tokenId(token.getRefreshTokenId())
+      .ipAddress(token.getIpAddress())
+      .deviceInfo(token.getDeviceInfo())
+      .issuedAt(token.getCreatedAt())
+      .expiresAt(token.getExpiresAt())
+      .expired(token.getExpiresAt().isBefore(Instant.now()))
+      .build();
+  }
 
 }

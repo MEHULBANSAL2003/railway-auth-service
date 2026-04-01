@@ -1,6 +1,7 @@
 package com.railway.auth_service.service;
 
 import com.railway.auth_service.dto.request.CreateAdminRequest;
+import com.railway.auth_service.dto.response.ActiveSessionResponse;
 import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
@@ -33,4 +34,6 @@ public interface AdminService {
   PagedResponse<UserStatusHistoryResponse> getUserStatusHistory(Long userId, Integer page, Integer size,
                                                                  String sortBy, String sortDir,
                                                                  Long adminId);
+
+  ActiveSessionResponse getActiveSession(Long adminId);
 }
