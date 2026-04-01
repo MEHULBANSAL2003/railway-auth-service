@@ -348,6 +348,7 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     user.setLastLoginAt(Instant.now());
     user.setLastLoginIp(clientIp);
+    user.setStatus(UserStatus.ACTIVE);
     userRepository.save(user);
 
     String accessToken = jwtUtil.generateAccessToken(
