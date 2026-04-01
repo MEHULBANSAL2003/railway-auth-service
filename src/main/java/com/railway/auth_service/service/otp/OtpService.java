@@ -39,6 +39,8 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class OtpService {
 
+  public record ResendResult(int expirySeconds, int resendsRemaining) {}
+
   /**
    * Redis key prefix for registration OTPs.
    * Full key: "auth:register:otp:{phone}"
@@ -311,7 +313,7 @@ public class OtpService {
    *
    * @throws BadRequestException if no pending registration found
    */
-  public int resend(String phone) {
+  public ResendResult resend(String phone) {
 
     String redisKey = OTP_KEY_PREFIX + phone;
 
@@ -333,11 +335,11 @@ public class OtpService {
     // If SMS fails, old OTP remains valid in Redis — user can retry resend.
     smsService.sendOtp(phone, newOtp);
 
-    applyResendState(redisKey, storedData, newOtp);
+    int resendsRemaining = applyResendState(redisKey, storedData, newOtp);
 
     log.info("OTP resent for phone: {}", maskPhone(phone));
 
-    return otpProperties.getExpirySeconds();
+    return new ResendResult(otpProperties.getExpirySeconds(), resendsRemaining);
   }
 
   public void checkNotAlreadySent(String phone) {
@@ -479,7 +481,7 @@ public class OtpService {
    * @param userId user's DB ID
    * @return OTP expiry time in seconds
    */
-  public int resendEmailOtp(String email, Long userId) {
+  public ResendResult resendEmailOtp(String email, Long userId) {
 
     String redisKey = EMAIL_OTP_KEY_PREFIX + email;
 
@@ -501,11 +503,11 @@ public class OtpService {
     // If email fails, old OTP remains valid — user can retry resend.
     emailService.sendOtp(email, newOtp, "Verify your email - Railway Booking");
 
-    applyResendState(redisKey, storedData, newOtp);
+    int resendsRemaining = applyResendState(redisKey, storedData, newOtp);
 
     log.info("Email OTP resent to {}", maskEmail(email));
 
-    return otpProperties.getExpirySeconds();
+    return new ResendResult(otpProperties.getExpirySeconds(), resendsRemaining);
   }
 
 
@@ -640,7 +642,7 @@ public class OtpService {
    * @param formattedPhone phone with country code (used as Redis key)
    * @return OTP expiry time in seconds
    */
-  public int resendResetOtp(String formattedPhone) {
+  public ResendResult resendResetOtp(String formattedPhone) {
 
     String redisKey = RESET_OTP_KEY_PREFIX + formattedPhone;
 
@@ -666,11 +668,11 @@ public class OtpService {
       smsService.sendOtp(formattedPhone, newOtp);
     }
 
-    applyResendState(redisKey, storedData, newOtp);
+    int resendsRemaining = applyResendState(redisKey, storedData, newOtp);
 
     log.info("Reset password OTP resent via {} for phone: {}", channel, maskPhone(formattedPhone));
 
-    return otpProperties.getExpirySeconds();
+    return new ResendResult(otpProperties.getExpirySeconds(), resendsRemaining);
   }
 
   /**
@@ -739,7 +741,7 @@ public class OtpService {
    *   - Saves with fresh TTL
    *   - Sets resend cooldown so next resend must wait
    */
-  private void applyResendState(String redisKey, Map<String, String> storedData, String newOtp) {
+  private int applyResendState(String redisKey, Map<String, String> storedData, String newOtp) {
     int resendCount = Integer.parseInt(storedData.getOrDefault(FIELD_RESEND_COUNT, "0"));
     storedData.put(FIELD_OTP, newOtp);
     storedData.put(FIELD_ATTEMPTS, "0");
@@ -750,6 +752,8 @@ public class OtpService {
     );
 
     setResendCooldown(redisKey);
+
+    return otpProperties.getMaxResends() - (resendCount + 1);
   }
 
   /**

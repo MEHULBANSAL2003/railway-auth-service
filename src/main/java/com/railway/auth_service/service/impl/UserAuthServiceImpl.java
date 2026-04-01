@@ -159,6 +159,7 @@ public class UserAuthServiceImpl implements UserAuthService {
       .expiresInSeconds(expirySeconds)
       .otpLength(otpProperties.getLength())
       .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
+      .resendsRemaining(otpProperties.getMaxResends())
       .build();
   }
 
@@ -274,15 +275,16 @@ public class UserAuthServiceImpl implements UserAuthService {
     // OtpService handles everything: fetch existing data → new OTP → fresh TTL → send SMS.
     // Throws BadRequestException if no pending registration found.
     String phone = formatIndianPhone(request.getPhone());
-    int expirySeconds = otpService.resend(phone);
+    OtpService.ResendResult result = otpService.resend(phone);
 
     log.info("OTP resent for phone: {}", maskPhone(phone));
 
     return RegisterInitiateResponse.builder()
       .message("OTP resent successfully")
-      .expiresInSeconds(expirySeconds)
+      .expiresInSeconds(result.expirySeconds())
       .otpLength(otpProperties.getLength())
       .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
+      .resendsRemaining(result.resendsRemaining())
       .build();
   }
 
@@ -513,6 +515,7 @@ public class UserAuthServiceImpl implements UserAuthService {
       .expiresInSeconds(expirySeconds)
       .otpLength(otpProperties.getLength())
       .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
+      .resendsRemaining(otpProperties.getMaxResends())
       .build();
   }
 
@@ -570,7 +573,7 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     // Step 3: Resend OTP (uses same channel as the original initiate)
     String formattedPhone = formatIndianPhone(user.getPhone());
-    int expirySeconds = otpService.resendResetOtp(formattedPhone);
+    OtpService.ResendResult result = otpService.resendResetOtp(formattedPhone);
 
     // Step 4: Build response message — read channel from Redis to get accurate info
     String channel = otpService.getResetOtpChannel(formattedPhone);
@@ -582,9 +585,10 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     return RegisterInitiateResponse.builder()
       .message(message)
-      .expiresInSeconds(expirySeconds)
+      .expiresInSeconds(result.expirySeconds())
       .otpLength(otpProperties.getLength())
       .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
+      .resendsRemaining(result.resendsRemaining())
       .build();
   }
 

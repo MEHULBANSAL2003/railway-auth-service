@@ -146,6 +146,7 @@ public class UserServiceImpl implements UserService {
       .expiresInSeconds(expirySeconds)
       .otpLength(otpProperties.getLength())
       .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
+      .resendsRemaining(otpProperties.getMaxResends())
       .build();
   }
 
@@ -185,13 +186,14 @@ public class UserServiceImpl implements UserService {
       throw new BadRequestException("Email is already verified");
     }
 
-    int expirySeconds = otpService.resendEmailOtp(user.getEmail(), userId);
+    OtpService.ResendResult result = otpService.resendEmailOtp(user.getEmail(), userId);
 
     return RegisterInitiateResponse.builder()
       .message("OTP resent to " + maskEmail(user.getEmail()))
-      .expiresInSeconds(expirySeconds)
+      .expiresInSeconds(result.expirySeconds())
       .otpLength(otpProperties.getLength())
       .resendCooldownSeconds(otpProperties.getResendCooldownSeconds())
+      .resendsRemaining(result.resendsRemaining())
       .build();
   }
 
