@@ -57,9 +57,12 @@ public class OtpService {
   private static final String RESET_OTP_KEY_PREFIX = "auth:reset:otp:";
   private static final String RESET_COOLDOWN_KEY_PREFIX = "auth:reset:cooldown:";
 
+  private static final String RESEND_THROTTLE_SUFFIX = ":resend-throttle";
+
   private static final String FIELD_USER_ID = "userId";
   private static final String FIELD_CHANNEL = "channel";
   private static final String FIELD_TARGET_EMAIL = "targetEmail";
+  private static final String FIELD_RESEND_COUNT = "resendCount";
 
   /**
    * Keys used internally in the Redis map.
@@ -166,6 +169,8 @@ public class OtpService {
 
     String jsonValue = serialize(registrationData);
     redisTemplate.opsForValue().set(redisKey, jsonValue, otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+
+    setResendCooldown(redisKey);
 
     log.info("OTP generated and stored for phone: {}", maskPhone(phone));
 
@@ -310,14 +315,8 @@ public class OtpService {
 
     String redisKey = OTP_KEY_PREFIX + phone;
 
-    /*
-     * Fetch existing data.
-     *
-     * Why must it exist?
-     * Resend only works if registration was initiated.
-     * If key expired, the registration data (username, email, etc.) is gone.
-     * User must fill the form and initiate again.
-     */
+    checkResendCooldown(redisKey);
+
     String jsonValue = redisTemplate.opsForValue().get(redisKey);
 
     if (jsonValue == null) {
@@ -326,24 +325,15 @@ public class OtpService {
 
     Map<String, String> storedData = deserialize(jsonValue);
 
-    // Generate new OTP — old one is now invalid (overwritten)
+    checkMaxResends(redisKey, storedData);
+
     String newOtp = generateOtp();
 
     // Send SMS BEFORE updating Redis.
     // If SMS fails, old OTP remains valid in Redis — user can retry resend.
     smsService.sendOtp(phone, newOtp);
 
-    /*
-     * SMS sent successfully — now update Redis.
-     *
-     * Reset attempts to 0: new OTP = fresh start.
-     * Fresh TTL: user explicitly asked for a new OTP,
-     * fair to give them a full window.
-     */
-    storedData.put(FIELD_OTP, newOtp);
-    storedData.put(FIELD_ATTEMPTS, "0");
-
-    redisTemplate.opsForValue().set(redisKey, serialize(storedData), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+    applyResendState(redisKey, storedData, newOtp);
 
     log.info("OTP resent for phone: {}", maskPhone(phone));
 
@@ -404,6 +394,8 @@ public class OtpService {
     data.put(FIELD_USER_ID, String.valueOf(userId));
 
     redisTemplate.opsForValue().set(redisKey, serialize(data), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+
+    setResendCooldown(redisKey);
 
     log.info("Email OTP sent to {}", maskEmail(email));
 
@@ -490,11 +482,18 @@ public class OtpService {
   public int resendEmailOtp(String email, Long userId) {
 
     String redisKey = EMAIL_OTP_KEY_PREFIX + email;
+
+    checkResendCooldown(redisKey);
+
     String jsonValue = redisTemplate.opsForValue().get(redisKey);
 
     if (jsonValue == null) {
       throw new BadRequestException("No pending email verification. Please request a new OTP.");
     }
+
+    Map<String, String> storedData = deserialize(jsonValue);
+
+    checkMaxResends(redisKey, storedData);
 
     String newOtp = generateOtp();
 
@@ -502,12 +501,7 @@ public class OtpService {
     // If email fails, old OTP remains valid — user can retry resend.
     emailService.sendOtp(email, newOtp, "Verify your email - Railway Booking");
 
-    // Email sent successfully — now update Redis
-    Map<String, String> storedData = deserialize(jsonValue);
-    storedData.put(FIELD_OTP, newOtp);
-    storedData.put(FIELD_ATTEMPTS, "0");
-
-    redisTemplate.opsForValue().set(redisKey, serialize(storedData), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+    applyResendState(redisKey, storedData, newOtp);
 
     log.info("Email OTP resent to {}", maskEmail(email));
 
@@ -567,6 +561,8 @@ public class OtpService {
     data.put(FIELD_TARGET_EMAIL, email);
 
     redisTemplate.opsForValue().set(redisKey, serialize(data), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+
+    setResendCooldown(redisKey);
 
     log.info("Reset password OTP sent via {} for phone: {}", sendToEmail ? "email" : "sms", maskPhone(formattedPhone));
 
@@ -647,6 +643,9 @@ public class OtpService {
   public int resendResetOtp(String formattedPhone) {
 
     String redisKey = RESET_OTP_KEY_PREFIX + formattedPhone;
+
+    checkResendCooldown(redisKey);
+
     String jsonValue = redisTemplate.opsForValue().get(redisKey);
 
     if (jsonValue == null) {
@@ -654,6 +653,9 @@ public class OtpService {
     }
 
     Map<String, String> storedData = deserialize(jsonValue);
+
+    checkMaxResends(redisKey, storedData);
+
     String newOtp = generateOtp();
     String channel = storedData.get(FIELD_CHANNEL);
 
@@ -664,11 +666,7 @@ public class OtpService {
       smsService.sendOtp(formattedPhone, newOtp);
     }
 
-    // Delivery succeeded — now update Redis
-    storedData.put(FIELD_OTP, newOtp);
-    storedData.put(FIELD_ATTEMPTS, "0");
-
-    redisTemplate.opsForValue().set(redisKey, serialize(storedData), otpProperties.getExpirySeconds(), TimeUnit.SECONDS);
+    applyResendState(redisKey, storedData, newOtp);
 
     log.info("Reset password OTP resent via {} for phone: {}", channel, maskPhone(formattedPhone));
 
@@ -702,6 +700,67 @@ public class OtpService {
     String domain = email.substring(atIndex);
     if (local.length() <= 2) return local + "****" + domain;
     return local.substring(0, 2) + "****" + domain;
+  }
+
+
+  // ═══════════════════════════════════════════
+  //  RESEND GUARDS (shared by all 3 resend flows)
+  // ═══════════════════════════════════════════
+
+  /**
+   * Checks the per-key resend cooldown (e.g., 30s gap between resends).
+   * Prevents rapid-fire resend button spam.
+   */
+  private void checkResendCooldown(String redisKey) {
+    String throttleKey = redisKey + RESEND_THROTTLE_SUFFIX;
+    if (redisTemplate.hasKey(throttleKey)) {
+      Long remaining = redisTemplate.getExpire(throttleKey, TimeUnit.SECONDS);
+      throw new TooManyRequestsException(
+        "Please wait " + remaining + " seconds before requesting another OTP."
+      );
+    }
+  }
+
+  /**
+   * Checks if max resend limit has been reached.
+   * Prevents unlimited OTP generation within one registration/reset window.
+   */
+  private void checkMaxResends(String redisKey, Map<String, String> storedData) {
+    int resendCount = Integer.parseInt(storedData.getOrDefault(FIELD_RESEND_COUNT, "0"));
+    if (resendCount >= otpProperties.getMaxResends()) {
+      redisTemplate.delete(redisKey);
+      throw new TooManyRequestsException("Maximum resend limit reached. Please start over.");
+    }
+  }
+
+  /**
+   * Updates Redis after a successful resend:
+   *   - Sets new OTP, resets per-OTP attempts, increments resend counter
+   *   - Saves with fresh TTL
+   *   - Sets resend cooldown so next resend must wait
+   */
+  private void applyResendState(String redisKey, Map<String, String> storedData, String newOtp) {
+    int resendCount = Integer.parseInt(storedData.getOrDefault(FIELD_RESEND_COUNT, "0"));
+    storedData.put(FIELD_OTP, newOtp);
+    storedData.put(FIELD_ATTEMPTS, "0");
+    storedData.put(FIELD_RESEND_COUNT, String.valueOf(resendCount + 1));
+
+    redisTemplate.opsForValue().set(
+      redisKey, serialize(storedData), otpProperties.getExpirySeconds(), TimeUnit.SECONDS
+    );
+
+    setResendCooldown(redisKey);
+  }
+
+  /**
+   * Sets a short-lived Redis key to enforce minimum gap between resends.
+   * Called after both initial OTP send and resend.
+   */
+  private void setResendCooldown(String redisKey) {
+    String throttleKey = redisKey + RESEND_THROTTLE_SUFFIX;
+    redisTemplate.opsForValue().set(
+      throttleKey, "1", otpProperties.getResendCooldownSeconds(), TimeUnit.SECONDS
+    );
   }
 
 

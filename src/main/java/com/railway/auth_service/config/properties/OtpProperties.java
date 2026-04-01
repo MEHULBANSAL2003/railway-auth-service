@@ -26,4 +26,8 @@ public class OtpProperties {
 
   private int maxAttempts = 3;
 
+  private int resendCooldownSeconds = 30;
+
+  private int maxResends = 3;
+
 }
