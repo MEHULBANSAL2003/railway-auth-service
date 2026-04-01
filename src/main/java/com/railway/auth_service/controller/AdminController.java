@@ -21,7 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -72,7 +71,7 @@ public class AdminController {
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
   }
 
-  @PatchMapping(ApiConstants.ADMIN_TOGGLE_STATUS)
+  @PostMapping(ApiConstants.ADMIN_TOGGLE_STATUS)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<Map<String, Object>>> toggleStatus(
     @PathVariable Long adminId,
@@ -85,7 +84,7 @@ public class AdminController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-  @PatchMapping(ApiConstants.ADMIN_CHANGE_ROLE)
+  @PostMapping(ApiConstants.ADMIN_CHANGE_ROLE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<Map<String, Object>>> changeRole(
     @PathVariable Long adminId,
