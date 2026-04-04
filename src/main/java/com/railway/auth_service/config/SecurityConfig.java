@@ -97,7 +97,7 @@ public class SecurityConfig {
   @Bean
   public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOrigins(List.of("http://localhost:3000","http://localhost:5173" ));
+    config.setAllowedOrigins(List.of("http://localhost:3000","http://localhost:5173","https://railtick.in","https://admin.railtick.in", "https://dev.railtick.in", "https://dev.admin.railtick.in" ));
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
     config.setAllowCredentials(true);
