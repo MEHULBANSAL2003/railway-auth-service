@@ -28,6 +28,13 @@
     <java.version>21</java.version>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/MEHULBANSAL2003/railway-common-lib</url>
+    </repository>
+  </repositories>
+
   <dependencies>
 
     <dependency>
