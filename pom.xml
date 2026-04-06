@@ -19,7 +19,7 @@
     <relativePath/>
   </parent>
 
-  <groupId>com.railways</groupId>
+  <groupId>com.railway</groupId>
   <artifactId>railway-auth-service</artifactId>
   <version>1.0.0</version>
   <packaging>jar</packaging>
