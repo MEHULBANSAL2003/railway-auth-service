@@ -1,0 +1,181 @@
+# ── How to run ───────────────────────────────────────────
+# Local dev:
+#   docker compose --env-file ../railway-secrets/auth-secrets/auth-dev.properties up --build
+#
+# Stop:
+#   docker compose down
+#
+# Stop and remove volumes (fresh start):
+#   docker compose down -v
+# ─────────────────────────────────────────────────────────
+
+name: railtick-auth
+
+services:
+
+  # ── NGINX ───────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+
+    # Container name — this is what appears in docker ps
+    # and what you use in docker logs, docker exec etc.
+    container_name: nginx-${SPRING_PROFILES_ACTIVE:-dev}
+
+    ports:
+      # Map host port 80 to container port 80.
+      # This is the ONLY port exposed to the outside world.
+      # auth-service has no ports section — unreachable directly.
+      - "8090:80"
+
+    volumes:
+      # Mount nginx.conf from repo into container at runtime.
+      # :ro = read only. Container cannot modify the file.
+      # WHY mount instead of COPY in a Dockerfile?
+      # If you change nginx.conf, you do not need to rebuild
+      # the entire image. Just restart the nginx container.
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template:ro
+
+    environment:
+      # This value comes from your auth-dev.properties file.
+      # Gets substituted into nginx.conf via envsubst.
+      # Dev:  dev.api.railtick.in
+      # Prod: api.railtick.in
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME}
+
+    # envsubst replaces ${NGINX_SERVER_NAME} in the template
+    # with the actual value from environment variable above.
+    # Then starts Nginx normally.
+    # WHY /etc/nginx/templates/?
+    # Official Nginx Docker image automatically runs envsubst
+    # on any file in this folder ending in .template and
+    # writes the result to /etc/nginx/conf.d/
+    # We do not need to write the envsubst command ourselves.
+    # The official image handles it for us.
+
+    depends_on:
+      auth-service:
+        # Nginx waits until auth-service passes health check.
+        # Without this, Nginx starts immediately, tries to
+        # forward requests to auth-service, gets connection
+        # refused because Spring Boot is still starting up.
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    networks:
+      - auth-internal
+
+
+  # ── AUTH SERVICE ────────────────────────────────────────
+  auth-service:
+    build:
+      # context: . means use railway-auth-service/ as the
+      # build context. Docker sends everything not in
+      # .dockerignore to the Docker engine from this folder.
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # GitHub PAT passed to Dockerfile ARG.
+        # Used during build to download railway-common-lib
+        # from GitHub Packages. Not stored in final image.
+        GITHUB_TOKEN: ${GITHUB_TOKEN}
+
+    container_name: auth-service-${SPRING_PROFILES_ACTIVE:-dev}
+
+    # No ports section intentionally.
+    # auth-service is only reachable via nginx on the
+    # internal Docker network. Nobody can reach port 8080
+    # directly from outside. Security by design.
+
+    environment:
+      # ── Spring Boot ────────────────────────────────────
+      # Tells Spring which yaml to load.
+      # dev   → application-dev.yaml
+      # prod  → application-prod.yaml
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+
+      # ── Database ───────────────────────────────────────
+      # Maps directly to ${DB_URL} in application-dev.yaml
+      # Spring Boot reads environment variables automatically.
+      DB_URL: ${DB_URL}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # ── Redis ──────────────────────────────────────────
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+      # ── JWT ────────────────────────────────────────────
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-900000}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-2592000000}
+
+      # ── Google OAuth ───────────────────────────────────
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:5173/auth/google/callback}
+
+      # ── Notifications ──────────────────────────────────
+      SMS_PROVIDER: ${SMS_PROVIDER}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_ADDRESS: ${RESEND_FROM_ADDRESS}
+
+      # Timezone — logs show IST not UTC
+      TZ: Asia/Kolkata
+
+    healthcheck:
+      # Spring Actuator health endpoint.
+      # Docker hits this every 30 seconds.
+      # Returns {"status":"UP"} when app is fully ready.
+      # Nginx will not start until this returns UP.
+      # Your CI/CD pipeline will also check this after
+      # deploying to confirm new version is actually running.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q 'UP' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      # Give Spring Boot 90 seconds to start before health
+      # checks begin counting failures.
+      # Spring Boot + Hibernate + DB connection takes time.
+      start_period: 90s
+
+    # Memory limits — prevents auth-service from consuming
+    # all EC2 RAM and starving other containers.
+    # 512MB is comfortable for an auth service.
+    mem_limit: 512m
+    mem_reservation: 256m
+
+    restart: unless-stopped
+
+    networks:
+      - auth-internal
+
+    volumes:
+      # Logs written inside container to /app/logs/
+      # Named volume persists logs across restarts.
+      # When you deploy a new version, old logs are not lost.
+      # CloudWatch agent on EC2 will read from here later.
+      - auth-logs:/app/logs
+
+
+# ── Networks ─────────────────────────────────────────────
+networks:
+  auth-internal:
+    # Custom bridge network.
+    # Nginx reaches auth-service by container name.
+    # No other containers outside this compose file
+    # can reach into this network.
+    driver: bridge
+
+
+# ── Volumes ──────────────────────────────────────────────
+volumes:
+  auth-logs:
+  # Named volume managed by Docker.
+  # Survives docker compose down.
+  # Only removed by docker compose down -v
