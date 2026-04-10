@@ -19,6 +19,7 @@ public class SmsProperties {
   private String provider;
 
   private Twilio twilio = new Twilio();
+  private Fast2Sms fast2Sms = new Fast2Sms();
 
   @Getter
   @Setter
@@ -26,5 +27,11 @@ public class SmsProperties {
     private String accountSid;
     private String authToken;
     private String fromNumber;
+  }
+
+  @Getter
+  @Setter
+  public static class Fast2Sms {
+    private String apiKey;
   }
 }

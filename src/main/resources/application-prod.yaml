@@ -57,10 +57,8 @@ app:
 
   sms:
     provider: ${SMS_PROVIDER}
-    twilio:
-      account-sid: ${TWILIO_ACCOUNT_SID}
-      auth-token: ${TWILIO_AUTH_TOKEN}
-      from-number: ${TWILIO_FROM_NUMBER}
+    fast2-sms:
+      api-key: ${FAST2SMS_API_KEY}
   email:
     provider: ${EMAIL_PROVIDER}
     ses:
