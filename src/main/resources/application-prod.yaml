@@ -63,11 +63,11 @@ app:
       from-number: ${TWILIO_FROM_NUMBER}
   email:
     provider: ${EMAIL_PROVIDER}
-    resend:
-      api-key: ${RESEND_API_KEY}
-      from-address: ${RESEND_FROM_ADDRESS}
+    ses:
+      from-address: ${SES_FROM_ADDRESS}
+      region: ${SES_REGION}
   otp:
-    use-fixed: true
+    use-fixed: false
     fixed-value: 111111
     length: 6
     expiry-seconds: 300

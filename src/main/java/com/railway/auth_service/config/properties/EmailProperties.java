@@ -19,11 +19,19 @@ public class EmailProperties {
   private String provider;
 
   private Resend resend = new Resend();
+  private Ses ses = new Ses();
 
   @Getter
   @Setter
   public static class Resend {
     private String apiKey;
     private String fromAddress;
+  }
+
+  @Getter
+  @Setter
+  public static class Ses {
+    private String fromAddress;
+    private String region;
   }
 }
