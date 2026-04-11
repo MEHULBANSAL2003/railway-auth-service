@@ -32,10 +32,19 @@ pipeline {
 
         stage('Build JAR') {
             steps {
-                // WHY skip tests here?
-                // Tests should run in a separate CI stage.
-                // This is a deploy pipeline — we just want the JAR fast.
-                sh 'mvn clean package -DskipTests'
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-credentials',
+                    usernameVariable: 'GITHUB_ACTOR',
+                    passwordVariable: 'GITHUB_TOKEN'
+                )]) {
+                    sh '''
+                        mvn clean package -DskipTests \
+                            -s .mvn/settings.xml \
+                            -Dgithub.actor=${GITHUB_ACTOR} \
+                            -Dgithub.token=${GITHUB_TOKEN} \
+                            --no-transfer-progress
+                    '''
+                }
             }
         }
 
