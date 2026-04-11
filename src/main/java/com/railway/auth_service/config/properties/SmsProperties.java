@@ -20,6 +20,7 @@ public class SmsProperties {
 
   private Twilio twilio = new Twilio();
   private Fast2Sms fast2Sms = new Fast2Sms();
+  private TwoFactor twoFactor = new TwoFactor();
 
   @Getter
   @Setter
@@ -32,6 +33,12 @@ public class SmsProperties {
   @Getter
   @Setter
   public static class Fast2Sms {
+    private String apiKey;
+  }
+
+  @Getter
+  @Setter
+  public static class TwoFactor {
     private String apiKey;
   }
 }
