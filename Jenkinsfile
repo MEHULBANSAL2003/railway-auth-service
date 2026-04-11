@@ -75,18 +75,25 @@ pipeline {
         stage('Push to GHCR') {
             steps {
                 script {
-                    // WHY withCredentials?
-                    // Safely injects the GHCR token without exposing it in logs
                     withCredentials([usernamePassword(
                         credentialsId: 'ghcr-credentials',
                         usernameVariable: 'GHCR_USER',
                         passwordVariable: 'GHCR_TOKEN'
                     )]) {
                         sh """
-                            echo \${GHCR_TOKEN} | docker login ghcr.io -u \${GHCR_USER} --password-stdin
+                            echo \${GHCR_TOKEN} | docker login ghcr.io \
+                              -u \${GHCR_USER} --password-stdin
                             docker push ${IMAGE_NAME}:${IMAGE_TAG}
                             docker push ${IMAGE_NAME}:latest
                         """
+
+                        if (params.ENVIRONMENT == 'prod') {
+                            sh """
+                                docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
+                                           ${IMAGE_NAME}:stable
+                                docker push ${IMAGE_NAME}:stable
+                            """
+                        }
                     }
                 }
             }
