@@ -1,0 +1,123 @@
+pipeline {
+    agent any
+
+    // WHY parameters here too?
+    // These mirror the Jenkins job parameters.
+    // Allows the Jenkinsfile to know which environment
+    // and branch was selected when triggered.
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'prod'], description: 'Environment to deploy to')
+        string(name: 'BRANCH', defaultValue: 'main', description: 'Branch to deploy from')
+    }
+
+    environment {
+        // GHCR image name
+        IMAGE_NAME = 'ghcr.io/mehulbansal2003/railway-auth-service'
+        IMAGE_TAG = "${BUILD_NUMBER}"  // unique tag per build
+
+        // Backend EC2 details — we'll use different IPs for dev/prod
+        BACKEND_USER = 'ubuntu'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                // WHY? Pull the exact branch the user selected
+                git credentialsId: 'github-credentials',
+                    url: 'https://github.com/mehulbansal2003/railway-auth-service',
+                    branch: "${params.BRANCH}"
+            }
+        }
+
+        stage('Build JAR') {
+            steps {
+                // WHY skip tests here?
+                // Tests should run in a separate CI stage.
+                // This is a deploy pipeline — we just want the JAR fast.
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // WHY tag with BUILD_NUMBER?
+                    // Every build gets a unique tag so you can rollback
+                    // to any previous version easily.
+                    sh """
+                        docker build \
+                          --platform linux/amd64 \
+                          --build-arg GITHUB_ACTOR=mehulbansal2003 \
+                          --build-arg GITHUB_TOKEN=\${GITHUB_TOKEN} \
+                          -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                          -t ${IMAGE_NAME}:latest \
+                          .
+                    """
+                }
+            }
+        }
+
+        stage('Push to GHCR') {
+            steps {
+                script {
+                    // WHY withCredentials?
+                    // Safely injects the GHCR token without exposing it in logs
+                    withCredentials([usernamePassword(
+                        credentialsId: 'ghcr-credentials',
+                        usernameVariable: 'GHCR_USER',
+                        passwordVariable: 'GHCR_TOKEN'
+                    )]) {
+                        sh """
+                            echo \${GHCR_TOKEN} | docker login ghcr.io -u \${GHCR_USER} --password-stdin
+                            docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                            docker push ${IMAGE_NAME}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                script {
+                    // Select correct EC2 based on environment
+                    def backendHost = params.ENVIRONMENT == 'prod'
+                        ? '10.0.1.162'
+                        : '10.0.1.146'
+
+                    def containerName = params.ENVIRONMENT == 'prod'
+                        ? 'railtick-auth-prod'
+                        : 'railtick-auth-dev'
+
+                    // WHY sshagent?
+                    // Injects the SSH key so we can SSH into EC2
+                    // without exposing the key in the script
+                    sshagent(['backend-ec2-ssh']) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ${BACKEND_USER}@${backendHost} '
+                                docker pull ${IMAGE_NAME}:latest &&
+                                docker stop ${containerName} || true &&
+                                docker rm ${containerName} || true &&
+                                docker run -d \
+                                    --name ${containerName} \
+                                    --env-file /home/ubuntu/railtick/.env \
+                                    -p 8080:8080 \
+                                    ${IMAGE_NAME}:latest
+                            '
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployed ${IMAGE_NAME}:${IMAGE_TAG} to ${params.ENVIRONMENT}"
+        }
+        failure {
+            echo "❌ Deployment failed!"
+        }
+    }
+}
