@@ -53,18 +53,21 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // WHY tag with BUILD_NUMBER?
-                    // Every build gets a unique tag so you can rollback
-                    // to any previous version easily.
-                    sh """
-                        docker build \
-                          --platform linux/amd64 \
-                          --build-arg GITHUB_ACTOR=mehulbansal2003 \
-                          --build-arg GITHUB_TOKEN=\${GITHUB_TOKEN} \
-                          -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                          -t ${IMAGE_NAME}:latest \
-                          .
-                    """
+                    withCredentials([usernamePassword(
+                        credentialsId: 'github-credentials',
+                        usernameVariable: 'GITHUB_ACTOR',
+                        passwordVariable: 'GITHUB_TOKEN'
+                    )]) {
+                        sh """
+                            docker build \
+                              --platform linux/amd64 \
+                              --build-arg GITHUB_ACTOR=${GITHUB_ACTOR} \
+                              --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} \
+                              -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                              -t ${IMAGE_NAME}:latest \
+                              .
+                        """
+                    }
                 }
             }
         }
