@@ -41,7 +41,7 @@ public class TwoFactorSmsService implements SmsService {
     try {
       String response = restClient
         .get()
-        .uri("/{apiKey}/SMS/{phone}/{otp}/AUTOGEN",
+        .uri("/{apiKey}/SMS/{phone}/{otp}/AUTOGEN2",
           twoFactorConfig.getApiKey(), phone, otp)
         .retrieve()
         .body(String.class);
