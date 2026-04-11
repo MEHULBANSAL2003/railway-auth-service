@@ -95,21 +95,21 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 script {
-                    // Select correct EC2 based on environment
                     def backendHost = params.ENVIRONMENT == 'prod'
-                        ? '10.0.1.162'
-                        : '10.0.1.146'
+                        ? 'YOUR_PROD_EC2_PRIVATE_IP'
+                        : 'YOUR_DEV_EC2_PRIVATE_IP'
 
                     def containerName = params.ENVIRONMENT == 'prod'
                         ? 'railtick-auth-prod'
                         : 'railtick-auth-dev'
 
-                    // WHY sshagent?
-                    // Injects the SSH key so we can SSH into EC2
-                    // without exposing the key in the script
-                    sshagent(['backend-ec2-ssh']) {
+                    def sshCredential = params.ENVIRONMENT == 'prod'
+                        ? 'prod-ec2-ssh'
+                        : 'dev-ec2-ssh'
+
+                    sshagent([sshCredential]) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no ${BACKEND_USER}@${backendHost} '
+                            ssh -o StrictHostKeyChecking=no ubuntu@${backendHost} '
                                 docker pull ${IMAGE_NAME}:latest &&
                                 docker stop ${containerName} || true &&
                                 docker rm ${containerName} || true &&
