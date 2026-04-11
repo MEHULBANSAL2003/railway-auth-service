@@ -61,9 +61,9 @@ app:
       api-key: ${TWO_FACTOR_API_KEY}
   email:
     provider: ${EMAIL_PROVIDER}
-    ses:
-      from-address: ${SES_FROM_ADDRESS}
-      region: ${SES_REGION}
+    resend:
+      api-key: ${RESEND_API_KEY}
+      from-address: ${RESEND_FROM_ADDRESS}
   otp:
     use-fixed: false
     fixed-value: 111111
