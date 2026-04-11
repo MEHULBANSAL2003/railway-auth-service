@@ -32,6 +32,8 @@ pipeline {
 
         stage('Build JAR') {
             steps {
+                sh 'java -version'
+                sh 'mvn --version'
                 withCredentials([usernamePassword(
                     credentialsId: 'github-credentials',
                     usernameVariable: 'GITHUB_ACTOR',
