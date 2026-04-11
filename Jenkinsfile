@@ -99,25 +99,20 @@ pipeline {
                         ? '10.0.1.162'
                         : '10.0.1.146'
 
-                    def containerName = params.ENVIRONMENT == 'prod'
-                        ? 'railtick-auth-prod'
-                        : 'railtick-auth-dev'
-
                     def sshCredential = params.ENVIRONMENT == 'prod'
                         ? 'prod-ec2-ssh'
                         : 'dev-ec2-ssh'
 
+                    def containerName = params.ENVIRONMENT == 'prod'
+                        ? 'auth-service'
+                        : 'auth-service'
+
                     sshagent([sshCredential]) {
                         sh """
                             ssh -o StrictHostKeyChecking=no ubuntu@${backendHost} '
-                                docker pull ${IMAGE_NAME}:latest &&
-                                docker stop ${containerName} || true &&
-                                docker rm ${containerName} || true &&
-                                docker run -d \
-                                    --name ${containerName} \
-                                    --env-file /home/ubuntu/railtick/.env \
-                                    -p 8080:8080 \
-                                    ${IMAGE_NAME}:latest
+                                cd /home/ubuntu/railtick &&
+                                docker compose pull auth-service &&
+                                docker compose up -d auth-service
                             '
                         """
                     }
