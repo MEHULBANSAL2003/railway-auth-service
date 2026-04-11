@@ -96,8 +96,8 @@ pipeline {
             steps {
                 script {
                     def backendHost = params.ENVIRONMENT == 'prod'
-                        ? 'YOUR_PROD_EC2_PRIVATE_IP'
-                        : 'YOUR_DEV_EC2_PRIVATE_IP'
+                        ? '10.0.1.162'
+                        : '10.0.1.146'
 
                     def containerName = params.ENVIRONMENT == 'prod'
                         ? 'railtick-auth-prod'
