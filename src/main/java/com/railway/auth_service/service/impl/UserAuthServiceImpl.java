@@ -257,12 +257,10 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     refreshTokenRepository.save(refreshTokenEntity);
 
-    // ── Capture registration metadata (one-time, async) ──
-    // This captures device, location, IP from initial signup
-    deviceInfoService.captureRegistrationMetadata(user.getUserId(), clientIp, userAgent);
-
-    // ── Also update login metadata since this is their first login ──
-    deviceInfoService.updateLoginMetadata(user.getUserId(), clientIp, userAgent);
+    // ── Capture BOTH registration AND login metadata (async) ──
+    // Registration IS the first login, so both should have identical data initially.
+    // On future logins, only login metadata will be updated.
+    deviceInfoService.captureRegistrationAndLoginMetadata(user.getUserId(), clientIp, userAgent);
 
     // ── Step 6: Build response ──
     UserProfileResponse profile = userMapper.toProfileResponse(user);

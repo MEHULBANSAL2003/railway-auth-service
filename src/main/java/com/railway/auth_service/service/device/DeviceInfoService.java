@@ -56,51 +56,67 @@ public class DeviceInfoService {
     .build();
 
   /**
-   * Captures registration metadata asynchronously - called ONCE at signup.
-   * Stores device, location, and IP info from the initial registration.
+   * Captures BOTH registration and login metadata during signup.
+   * Called ONCE at registration - sets both registration fields (immutable)
+   * and login fields (will update on subsequent logins) to the same values.
    *
    * @param userId    the user's DB ID
    * @param ip        client IP address at registration
    * @param userAgent raw User-Agent header string at registration
    *
-   * This data is immutable (updatable = false in entity) and provides
-   * a historical record of where/how the user signed up.
+   * Why set both?
+   * Registration IS the first login, so both should have identical data initially.
+   * On future logins, only login metadata gets updated.
    */
   @Async("authAsyncExecutor")
-  public void captureRegistrationMetadata(Long userId, String ip, String userAgent) {
+  public void captureRegistrationAndLoginMetadata(Long userId, String ip, String userAgent) {
     try {
-      // Parse device info from User-Agent
+      // Parse device info from User-Agent (once)
       DeviceInfo deviceInfo = parseDevice(userAgent);
 
-      // Resolve location from IP
+      // Resolve location from IP (once)
       LocationInfo locationInfo = resolveLocation(ip);
 
-      // Fetch user and set registration fields (one-time only)
+      // Fetch user and set BOTH registration and login fields
       userRepository.findById(userId).ifPresent(user -> {
         // Safety check: Only set registration metadata if it's not already set
-        // This ensures true immutability at the application level
         if (user.getRegisteredDeviceType() != null) {
           log.warn("Registration metadata already exists for userId={}. Skipping update.", userId);
           return;
         }
 
-        // Device info
+        // Set registration metadata (immutable - captured once)
         user.setRegisteredDeviceType(deviceInfo.getDeviceType());
         user.setRegisteredDeviceName(deviceInfo.getDeviceName());
         user.setRegisteredOs(deviceInfo.getOs());
         user.setRegisteredBrowser(deviceInfo.getBrowser());
 
-        // Location info
+        // Set last login metadata (mutable - updates on each login)
+        // During registration, both should be identical
+        user.setLastDeviceType(deviceInfo.getDeviceType());
+        user.setLastDeviceName(deviceInfo.getDeviceName());
+        user.setLastOs(deviceInfo.getOs());
+        user.setLastBrowser(deviceInfo.getBrowser());
+
+        // Set location for both registration and login
         if (locationInfo != null) {
+          // Registration location (immutable)
           user.setRegisteredCity(locationInfo.getCity());
           user.setRegisteredState(locationInfo.getState());
           user.setRegisteredCountry(locationInfo.getCountry());
           user.setRegisteredLatitude(locationInfo.getLatitude());
           user.setRegisteredLongitude(locationInfo.getLongitude());
+
+          // Last login location (mutable)
+          user.setLastLoginCity(locationInfo.getCity());
+          user.setLastLoginState(locationInfo.getState());
+          user.setLastLoginCountry(locationInfo.getCountry());
+          user.setLastLoginLatitude(locationInfo.getLatitude());
+          user.setLastLoginLongitude(locationInfo.getLongitude());
         }
 
         userRepository.save(user);
-        log.info("Registration metadata captured for userId={}: device={}, deviceName={}, os={}, browser={}, city={}, lat={}, lon={}",
+        log.info("Registration + Login metadata captured for userId={}: device={}, deviceName={}, os={}, browser={}, city={}, lat={}, lon={}",
           userId, deviceInfo.getDeviceType(), deviceInfo.getDeviceName(),
           deviceInfo.getOs(), deviceInfo.getBrowser(),
           locationInfo != null ? locationInfo.getCity() : "unknown",
