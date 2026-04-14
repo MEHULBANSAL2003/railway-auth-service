@@ -85,42 +85,44 @@ public class User {
   private String statusReason;
 
   // ── Registration Info ──
+  // Note: These fields should only be set once at signup (enforced in service layer)
+  // We don't use updatable=false because it prevents the async metadata capture
 
   @Column(name = "registered_at", nullable = false, updatable = false)
   private Instant registeredAt;
 
-  @Column(name = "registered_ip", length = 45, updatable = false)
+  @Column(name = "registered_ip", length = 45)
   private String registeredIp;
 
   // ── Registration Device (set once at signup) ──
 
-  @Column(name = "registered_device_type", length = 20, updatable = false)
+  @Column(name = "registered_device_type", length = 20)
   private String registeredDeviceType;
 
-  @Column(name = "registered_device_name", length = 100, updatable = false)
+  @Column(name = "registered_device_name", length = 100)
   private String registeredDeviceName;
 
-  @Column(name = "registered_os", length = 50, updatable = false)
+  @Column(name = "registered_os", length = 50)
   private String registeredOs;
 
-  @Column(name = "registered_browser", length = 50, updatable = false)
+  @Column(name = "registered_browser", length = 50)
   private String registeredBrowser;
 
   // ── Registration Location (set once at signup) ──
 
-  @Column(name = "registered_city", length = 100, updatable = false)
+  @Column(name = "registered_city", length = 100)
   private String registeredCity;
 
-  @Column(name = "registered_state", length = 100, updatable = false)
+  @Column(name = "registered_state", length = 100)
   private String registeredState;
 
-  @Column(name = "registered_country", length = 100, updatable = false)
+  @Column(name = "registered_country", length = 100)
   private String registeredCountry;
 
-  @Column(name = "registered_latitude", updatable = false)
+  @Column(name = "registered_latitude")
   private Double registeredLatitude;
 
-  @Column(name = "registered_longitude", updatable = false)
+  @Column(name = "registered_longitude")
   private Double registeredLongitude;
 
   // ── Last Login Info ──

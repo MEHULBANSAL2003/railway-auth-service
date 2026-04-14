@@ -77,6 +77,13 @@ public class DeviceInfoService {
 
       // Fetch user and set registration fields (one-time only)
       userRepository.findById(userId).ifPresent(user -> {
+        // Safety check: Only set registration metadata if it's not already set
+        // This ensures true immutability at the application level
+        if (user.getRegisteredDeviceType() != null) {
+          log.warn("Registration metadata already exists for userId={}. Skipping update.", userId);
+          return;
+        }
+
         // Device info
         user.setRegisteredDeviceType(deviceInfo.getDeviceType());
         user.setRegisteredDeviceName(deviceInfo.getDeviceName());
@@ -93,7 +100,7 @@ public class DeviceInfoService {
         }
 
         userRepository.save(user);
-        log.debug("Registration metadata captured for userId={}: device={}, deviceName={}, os={}, browser={}, city={}, lat={}, lon={}",
+        log.info("Registration metadata captured for userId={}: device={}, deviceName={}, os={}, browser={}, city={}, lat={}, lon={}",
           userId, deviceInfo.getDeviceType(), deviceInfo.getDeviceName(),
           deviceInfo.getOs(), deviceInfo.getBrowser(),
           locationInfo != null ? locationInfo.getCity() : "unknown",
