@@ -203,9 +203,9 @@ public class DeviceInfoService {
     // We categorize into MOBILE, TABLET, DESKTOP
     String deviceType = detectDeviceType(client.device.family, userAgent);
 
-    // Device name: "iPhone 14 Pro", "Realme RMX3834", "Samsung SM-G998B"
-    // Combines device family and model if available
-    String deviceName = buildDeviceName(client.device.family, client.device.model);
+    // Device name: "iPhone", "Samsung SM-G998B", etc.
+    // ua_parser provides device family which often includes model info
+    String deviceName = buildDeviceName(client.device.family, userAgent);
 
     // OS: "iOS 17", "Android 14", "Windows 11", "Mac OS X 14"
     String os = buildOsString(client.os.family, client.os.major);
@@ -256,33 +256,45 @@ public class DeviceInfoService {
   }
 
   /**
-   * Builds device name from family and model.
-   * Examples:
-   *   - family="iPhone", model="14 Pro" → "iPhone 14 Pro"
-   *   - family="Realme", model="RMX3834" → "Realme RMX3834"
-   *   - family="Samsung", model="SM-G998B" → "Samsung SM-G998B"
-   *   - family="Other", model=null → null (generic device)
+   * Builds device name from family and extracts model from User-Agent.
+   *
+   * ua_parser's device.family often includes useful model info:
+   *   - "iPhone" → "iPhone"
+   *   - "Samsung SM-G998B" → "Samsung SM-G998B"
+   *   - "Realme RMX3834" → "Realme RMX3834"
+   *   - "iPad" → "iPad"
+   *
+   * For Android devices, we try to extract more specific model from UA string.
    *
    * Returns null for generic/unknown devices.
    */
-  private String buildDeviceName(String family, String model) {
+  private String buildDeviceName(String family, String userAgent) {
     // Don't store generic device names
     if (family == null || "Other".equals(family) || family.isBlank()) {
       return null;
     }
 
-    // If no model, just return family (e.g., "iPhone", "iPad")
-    if (model == null || model.isBlank()) {
+    // If family already has model info (like "Samsung SM-G998B"), use it
+    if (family.contains(" ") || family.matches(".*[A-Z]{2}.*\\d+.*")) {
       return family;
     }
 
-    // Combine family and model
-    // Check if model already contains family name to avoid duplication
-    if (model.toLowerCase().contains(family.toLowerCase())) {
-      return model;
+    // For Android devices, try to extract model from User-Agent
+    if (userAgent != null && userAgent.toLowerCase().contains("android")) {
+      // Try to extract model pattern like "RMX3834", "SM-G998B", "M2101K6G"
+      java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\b([A-Z]{2,}[0-9]{3,}[A-Z0-9]*)\\b");
+      java.util.regex.Matcher matcher = pattern.matcher(userAgent);
+      if (matcher.find()) {
+        String model = matcher.group(1);
+        // Avoid matching obvious non-model strings
+        if (!model.matches("(KHTML|APPLEWEBKIT|CHROME|SAFARI|GECKO|MOZILLA|HTTP)")) {
+          return family + " " + model;
+        }
+      }
     }
 
-    return family + " " + model;
+    // Default: just return the family name
+    return family;
   }
 
   /**
