@@ -1,6 +1,8 @@
 package com.railway.auth_service.mapper;
 
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
+import com.railway.auth_service.dto.response.LastLoginMetadata;
+import com.railway.auth_service.dto.response.RegistrationMetadata;
 import com.railway.auth_service.dto.response.UserProfileResponse;
 import com.railway.auth_service.model.entity.User;
 import org.springframework.stereotype.Component;
@@ -41,6 +43,36 @@ public class UserMapper {
 
 
   public AdminUserDetailResponse toAdminDetailResponse(User user) {
+    // Build registration metadata
+    RegistrationMetadata registrationMetadata = RegistrationMetadata.builder()
+      .registeredAt(user.getRegisteredAt())
+      .registeredIp(user.getRegisteredIp())
+      .deviceType(user.getRegisteredDeviceType())
+      .deviceName(user.getRegisteredDeviceName())
+      .os(user.getRegisteredOs())
+      .browser(user.getRegisteredBrowser())
+      .city(user.getRegisteredCity())
+      .state(user.getRegisteredState())
+      .country(user.getRegisteredCountry())
+      .latitude(user.getRegisteredLatitude())
+      .longitude(user.getRegisteredLongitude())
+      .build();
+
+    // Build last login metadata
+    LastLoginMetadata lastLoginMetadata = LastLoginMetadata.builder()
+      .lastLoginAt(user.getLastLoginAt())
+      .lastLoginIp(user.getLastLoginIp())
+      .deviceType(user.getLastDeviceType())
+      .deviceName(user.getLastDeviceName())
+      .os(user.getLastOs())
+      .browser(user.getLastBrowser())
+      .city(user.getLastLoginCity())
+      .state(user.getLastLoginState())
+      .country(user.getLastLoginCountry())
+      .latitude(user.getLastLoginLatitude())
+      .longitude(user.getLastLoginLongitude())
+      .build();
+
     return AdminUserDetailResponse.builder()
       .userId(user.getUserId())
       .username(user.getUsername())
@@ -52,14 +84,8 @@ public class UserMapper {
       .emailVerified(user.isEmailVerified())
       .status(user.getStatus())
       .statusReason(user.getStatusReason())
-      .lastLoginAt(user.getLastLoginAt())
-      .lastLoginIp(user.getLastLoginIp())
-      .lastDeviceType(user.getLastDeviceType())
-      .lastOs(user.getLastOs())
-      .lastBrowser(user.getLastBrowser())
-      .lastLoginCity(user.getLastLoginCity())
-      .lastLoginState(user.getLastLoginState())
-      .lastLoginCountry(user.getLastLoginCountry())
+      .registrationMetadata(registrationMetadata)
+      .lastLoginMetadata(lastLoginMetadata)
       .profileImageUrl(user.getProfileImageUrl())
       .dateOfBirth(user.getDateOfBirth())
       .gender(user.getGender())

@@ -56,7 +56,60 @@ public class DeviceInfoService {
     .build();
 
   /**
-   * Updates user's login metadata asynchronously.
+   * Captures registration metadata asynchronously - called ONCE at signup.
+   * Stores device, location, and IP info from the initial registration.
+   *
+   * @param userId    the user's DB ID
+   * @param ip        client IP address at registration
+   * @param userAgent raw User-Agent header string at registration
+   *
+   * This data is immutable (updatable = false in entity) and provides
+   * a historical record of where/how the user signed up.
+   */
+  @Async("authAsyncExecutor")
+  public void captureRegistrationMetadata(Long userId, String ip, String userAgent) {
+    try {
+      // Parse device info from User-Agent
+      DeviceInfo deviceInfo = parseDevice(userAgent);
+
+      // Resolve location from IP
+      LocationInfo locationInfo = resolveLocation(ip);
+
+      // Fetch user and set registration fields (one-time only)
+      userRepository.findById(userId).ifPresent(user -> {
+        // Device info
+        user.setRegisteredDeviceType(deviceInfo.getDeviceType());
+        user.setRegisteredDeviceName(deviceInfo.getDeviceName());
+        user.setRegisteredOs(deviceInfo.getOs());
+        user.setRegisteredBrowser(deviceInfo.getBrowser());
+
+        // Location info
+        if (locationInfo != null) {
+          user.setRegisteredCity(locationInfo.getCity());
+          user.setRegisteredState(locationInfo.getState());
+          user.setRegisteredCountry(locationInfo.getCountry());
+          user.setRegisteredLatitude(locationInfo.getLatitude());
+          user.setRegisteredLongitude(locationInfo.getLongitude());
+        }
+
+        userRepository.save(user);
+        log.debug("Registration metadata captured for userId={}: device={}, deviceName={}, os={}, browser={}, city={}, lat={}, lon={}",
+          userId, deviceInfo.getDeviceType(), deviceInfo.getDeviceName(),
+          deviceInfo.getOs(), deviceInfo.getBrowser(),
+          locationInfo != null ? locationInfo.getCity() : "unknown",
+          locationInfo != null ? locationInfo.getLatitude() : null,
+          locationInfo != null ? locationInfo.getLongitude() : null);
+      });
+
+    } catch (Exception e) {
+      // Never let metadata failure affect registration
+      log.error("Failed to capture registration metadata for userId={}: {}", userId, e.getMessage());
+    }
+  }
+
+  /**
+   * Updates user's login metadata asynchronously - called on EVERY login.
+   * Stores device, location, and IP info from the most recent login.
    *
    * @param userId    the user's DB ID
    * @param ip        client IP address
@@ -90,6 +143,7 @@ public class DeviceInfoService {
       userRepository.findById(userId).ifPresent(user -> {
         // Device info
         user.setLastDeviceType(deviceInfo.getDeviceType());
+        user.setLastDeviceName(deviceInfo.getDeviceName());
         user.setLastOs(deviceInfo.getOs());
         user.setLastBrowser(deviceInfo.getBrowser());
 
@@ -98,13 +152,17 @@ public class DeviceInfoService {
           user.setLastLoginCity(locationInfo.getCity());
           user.setLastLoginState(locationInfo.getState());
           user.setLastLoginCountry(locationInfo.getCountry());
+          user.setLastLoginLatitude(locationInfo.getLatitude());
+          user.setLastLoginLongitude(locationInfo.getLongitude());
         }
 
         userRepository.save(user);
-        log.debug("Login metadata updated for userId={}: device={}, os={}, browser={}, city={}",
-          userId, deviceInfo.getDeviceType(), deviceInfo.getOs(),
-          deviceInfo.getBrowser(),
-          locationInfo != null ? locationInfo.getCity() : "unknown");
+        log.debug("Login metadata updated for userId={}: device={}, deviceName={}, os={}, browser={}, city={}, lat={}, lon={}",
+          userId, deviceInfo.getDeviceType(), deviceInfo.getDeviceName(),
+          deviceInfo.getOs(), deviceInfo.getBrowser(),
+          locationInfo != null ? locationInfo.getCity() : "unknown",
+          locationInfo != null ? locationInfo.getLatitude() : null,
+          locationInfo != null ? locationInfo.getLongitude() : null);
       });
 
     } catch (Exception e) {
@@ -120,7 +178,7 @@ public class DeviceInfoService {
    *   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)..."
    *
    * Example output:
-   *   DeviceInfo(deviceType="MOBILE", os="iOS 17", browser="Safari 17")
+   *   DeviceInfo(deviceType="MOBILE", deviceName="iPhone", os="iOS 17", browser="Safari 17")
    *
    * How ua_parser works:
    *   It has a YAML file with ~1000 regex patterns for every known
@@ -132,6 +190,7 @@ public class DeviceInfoService {
     if (userAgent == null || userAgent.isBlank()) {
       return DeviceInfo.builder()
         .deviceType("UNKNOWN")
+        .deviceName(null)
         .os("UNKNOWN")
         .browser("UNKNOWN")
         .build();
@@ -144,6 +203,10 @@ public class DeviceInfoService {
     // We categorize into MOBILE, TABLET, DESKTOP
     String deviceType = detectDeviceType(client.device.family, userAgent);
 
+    // Device name: "iPhone 14 Pro", "Realme RMX3834", "Samsung SM-G998B"
+    // Combines device family and model if available
+    String deviceName = buildDeviceName(client.device.family, client.device.model);
+
     // OS: "iOS 17", "Android 14", "Windows 11", "Mac OS X 14"
     String os = buildOsString(client.os.family, client.os.major);
 
@@ -152,6 +215,7 @@ public class DeviceInfoService {
 
     return DeviceInfo.builder()
       .deviceType(deviceType)
+      .deviceName(deviceName)
       .os(os)
       .browser(browser)
       .build();
@@ -192,6 +256,36 @@ public class DeviceInfoService {
   }
 
   /**
+   * Builds device name from family and model.
+   * Examples:
+   *   - family="iPhone", model="14 Pro" → "iPhone 14 Pro"
+   *   - family="Realme", model="RMX3834" → "Realme RMX3834"
+   *   - family="Samsung", model="SM-G998B" → "Samsung SM-G998B"
+   *   - family="Other", model=null → null (generic device)
+   *
+   * Returns null for generic/unknown devices.
+   */
+  private String buildDeviceName(String family, String model) {
+    // Don't store generic device names
+    if (family == null || "Other".equals(family) || family.isBlank()) {
+      return null;
+    }
+
+    // If no model, just return family (e.g., "iPhone", "iPad")
+    if (model == null || model.isBlank()) {
+      return family;
+    }
+
+    // Combine family and model
+    // Check if model already contains family name to avoid duplication
+    if (model.toLowerCase().contains(family.toLowerCase())) {
+      return model;
+    }
+
+    return family + " " + model;
+  }
+
+  /**
    * Builds OS string like "iOS 17", "Windows 11".
    * Returns just family name if version is missing.
    */
@@ -212,12 +306,22 @@ public class DeviceInfoService {
   }
 
   /**
-   * Resolves IP address to geographic location.
+   * Resolves IP address to geographic location with precise coordinates.
    *
    * Uses ip-api.com — free tier:
    *   - 45 requests per minute
    *   - No API key needed
-   *   - Returns JSON with city, region, country
+   *   - Returns JSON with city, region, country, lat, lon
+   *
+   * Now includes latitude and longitude for more precise location tracking.
+   * This helps differentiate nearby cities like Delhi vs Gurugram, Bathinda vs Ludhiana.
+   *
+   * The lat/lon coordinates are based on ISP's registered location for the IP range,
+   * which is generally accurate to the city/district level. For even better accuracy
+   * in production, consider:
+   *   - MaxMind GeoIP2 Precision: city-level accuracy up to 95%
+   *   - ipinfo.io: includes ASN data for ISP-level filtering
+   *   - ipapi.co: better accuracy for Indian IPs
    *
    * Returns null for:
    *   - Localhost IPs (127.0.0.1, ::1) — no location
@@ -239,9 +343,10 @@ public class DeviceInfoService {
     }
 
     try {
+      // Request full geolocation data including coordinates
       String response = geoClient
         .get()
-        .uri("/json/{ip}", ip)
+        .uri("/json/{ip}?fields=status,message,country,regionName,city,lat,lon", ip)
         .retrieve()
         .body(String.class);
 
@@ -253,10 +358,25 @@ public class DeviceInfoService {
         return null;
       }
 
+      // Extract location data with coordinates
+      String city = json.path("city").asText(null);
+      String state = json.path("regionName").asText(null);
+      String country = json.path("country").asText(null);
+
+      // Get precise coordinates - helps differentiate nearby cities
+      Double latitude = json.has("lat") && !json.path("lat").isNull()
+        ? json.path("lat").asDouble()
+        : null;
+      Double longitude = json.has("lon") && !json.path("lon").isNull()
+        ? json.path("lon").asDouble()
+        : null;
+
       return LocationInfo.builder()
-        .city(json.path("city").asText(null))
-        .state(json.path("regionName").asText(null))
-        .country(json.path("country").asText(null))
+        .city(city)
+        .state(state)
+        .country(country)
+        .latitude(latitude)
+        .longitude(longitude)
         .build();
 
     } catch (Exception e) {

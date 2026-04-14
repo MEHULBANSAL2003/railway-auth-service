@@ -188,6 +188,11 @@ public class UserAuthServiceImpl implements UserAuthService {
     // Why NOT set emailVerified=true?
     // Email was never verified. User can verify email later
     // via a separate email OTP flow.
+    //
+    // registeredAt is set once at signup and never changes.
+    // lastLoginAt updates on every login (including this first one).
+    // registeredIp is also set once to track signup location.
+    Instant now = Instant.now();
     User user = User.builder()
       .username(data.get("username"))
       .fullName(data.get("fullName"))
@@ -197,7 +202,9 @@ public class UserAuthServiceImpl implements UserAuthService {
       .phoneVerified(true)
       .emailVerified(false)
       .status(UserStatus.ACTIVE)
-      .lastLoginAt(Instant.now())
+      .registeredAt(now)
+      .registeredIp(clientIp)
+      .lastLoginAt(now)
       .lastLoginIp(clientIp)
       .build();
 
@@ -250,6 +257,11 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     refreshTokenRepository.save(refreshTokenEntity);
 
+    // ── Capture registration metadata (one-time, async) ──
+    // This captures device, location, IP from initial signup
+    deviceInfoService.captureRegistrationMetadata(user.getUserId(), clientIp, userAgent);
+
+    // ── Also update login metadata since this is their first login ──
     deviceInfoService.updateLoginMetadata(user.getUserId(), clientIp, userAgent);
 
     // ── Step 6: Build response ──

@@ -29,19 +29,11 @@ public class AdminUserDetailResponse {
   private UserStatus status;
   private String statusReason;
 
-  // ── Last Login Info ──
-  private Instant lastLoginAt;
-  private String lastLoginIp;
+  // ── Registration Metadata (set once at signup) ──
+  private RegistrationMetadata registrationMetadata;
 
-  // ── Last Device Info ──
-  private String lastDeviceType;
-  private String lastOs;
-  private String lastBrowser;
-
-  // ── Last Location ──
-  private String lastLoginCity;
-  private String lastLoginState;
-  private String lastLoginCountry;
+  // ── Last Login Metadata (updates on each login) ──
+  private LastLoginMetadata lastLoginMetadata;
 
   // ── Profile ──
   private String profileImageUrl;

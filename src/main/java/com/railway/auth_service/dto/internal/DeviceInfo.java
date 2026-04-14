@@ -17,6 +17,12 @@ public class DeviceInfo {
   private String deviceType;
 
   /**
+   * Device model name: "iPhone 14 Pro", "Realme RMX3834", "Samsung SM-G998B", etc.
+   * Can be null if device is not recognized.
+   */
+  private String deviceName;
+
+  /**
    * OS name with version: "Windows 11", "macOS 14", "Android 14", "iOS 17"
    */
   private String os;

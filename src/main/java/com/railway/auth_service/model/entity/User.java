@@ -24,6 +24,7 @@ import java.time.LocalDate;
     @Index(name = "idx_users_phone", columnList = "phone"),
     @Index(name = "idx_users_status", columnList = "status"),
     @Index(name = "idx_users_created_at", columnList = "created_at"),
+    @Index(name = "idx_users_registered_at", columnList = "registered_at"),
     @Index(name = "idx_users_last_login", columnList = "last_login_at")
   }
 )
@@ -83,6 +84,45 @@ public class User {
   @Column(name = "status_reason", length = 500)
   private String statusReason;
 
+  // ── Registration Info ──
+
+  @Column(name = "registered_at", nullable = false, updatable = false)
+  private Instant registeredAt;
+
+  @Column(name = "registered_ip", length = 45, updatable = false)
+  private String registeredIp;
+
+  // ── Registration Device (set once at signup) ──
+
+  @Column(name = "registered_device_type", length = 20, updatable = false)
+  private String registeredDeviceType;
+
+  @Column(name = "registered_device_name", length = 100, updatable = false)
+  private String registeredDeviceName;
+
+  @Column(name = "registered_os", length = 50, updatable = false)
+  private String registeredOs;
+
+  @Column(name = "registered_browser", length = 50, updatable = false)
+  private String registeredBrowser;
+
+  // ── Registration Location (set once at signup) ──
+
+  @Column(name = "registered_city", length = 100, updatable = false)
+  private String registeredCity;
+
+  @Column(name = "registered_state", length = 100, updatable = false)
+  private String registeredState;
+
+  @Column(name = "registered_country", length = 100, updatable = false)
+  private String registeredCountry;
+
+  @Column(name = "registered_latitude", updatable = false)
+  private Double registeredLatitude;
+
+  @Column(name = "registered_longitude", updatable = false)
+  private Double registeredLongitude;
+
   // ── Last Login Info ──
 
   @Column(name = "last_login_at")
@@ -95,6 +135,9 @@ public class User {
 
   @Column(name = "last_device_type", length = 20)
   private String lastDeviceType;
+
+  @Column(name = "last_device_name", length = 100)
+  private String lastDeviceName;
 
   @Column(name = "last_os", length = 50)
   private String lastOs;
@@ -112,6 +155,12 @@ public class User {
 
   @Column(name = "last_login_country", length = 100)
   private String lastLoginCountry;
+
+  @Column(name = "last_login_latitude")
+  private Double lastLoginLatitude;
+
+  @Column(name = "last_login_longitude")
+  private Double lastLoginLongitude;
 
   // ── Password Change Tracking ──
 
