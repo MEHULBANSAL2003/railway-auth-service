@@ -340,25 +340,25 @@ public class AdminServiceImpl implements AdminService {
     Instant startOfWeek   = now.minus(7,  ChronoUnit.DAYS);
     Instant startOfMonth  = now.minus(30, ChronoUnit.DAYS);
 
-    long totalUsers    = adminRepository.count();
-    long activeUsers   = adminRepository.countByStatus(UserStatus.ACTIVE);
+    long totalUsers    = userRepository.count();
+    long activeUsers   = userRepository.countByStatus(UserStatus.ACTIVE);
 
-    long regToday  = adminRepository.countByRegisteredAtAfter(startOfToday);
-    long regWeek   = adminRepository.countByRegisteredAtAfter(startOfWeek);
-    long regMonth  = adminRepository.countByRegisteredAtAfter(startOfMonth);
+    long regToday  = userRepository.countByRegisteredAtAfter(startOfToday);
+    long regWeek   = userRepository.countByRegisteredAtAfter(startOfWeek);
+    long regMonth  = userRepository.countByRegisteredAtAfter(startOfMonth);
 
-    long loginToday = adminRepository.countByLastLoginAtAfter(startOfToday);
-    long loginWeek  = adminRepository.countByLastLoginAtAfter(startOfWeek);
-    long loginMonth = adminRepository.countByLastLoginAtAfter(startOfMonth);
+    long loginToday = userRepository.countByLastLoginAtAfter(startOfToday);
+    long loginWeek  = userRepository.countByLastLoginAtAfter(startOfWeek);
+    long loginMonth = userRepository.countByLastLoginAtAfter(startOfMonth);
 
-    long emailVerified  = adminRepository.countByEmailVerifiedTrue();
-    long phoneVerified  = adminRepository.countByPhoneVerifiedTrue();
-    long fullyVerified  = adminRepository.countByEmailVerifiedTrueAndPhoneVerifiedTrue();
+    long emailVerified  = userRepository.countByEmailVerifiedTrue();
+    long phoneVerified  = userRepository.countByPhoneVerifiedTrue();
+    long fullyVerified  = userRepository.countByEmailVerifiedTrueAndPhoneVerifiedTrue();
     double emailRate    = totalUsers > 0 ? (emailVerified * 100.0 / totalUsers) : 0;
     double phoneRate    = totalUsers > 0 ? (phoneVerified * 100.0 / totalUsers) : 0;
 
-    Double avgPwdChange = adminRepository.avgPasswordChangeCount();
-    long neverChanged   = adminRepository.countByPasswordChangeCount(0);
+    Double avgPwdChange = userRepository.avgPasswordChangeCount();
+    long neverChanged   = userRepository.countByPasswordChangeCount(0);
 
     return UsersAnalyticsDataResponse.builder()
       .totalUsers(totalUsers)
@@ -374,11 +374,11 @@ public class AdminServiceImpl implements AdminService {
       .fullyVerifiedUsers(fullyVerified)
       .emailVerificationRate(Math.round(emailRate * 100.0) / 100.0)
       .phoneVerificationRate(Math.round(phoneRate * 100.0) / 100.0)
-      .registeredByDeviceType(toMap(adminRepository.countByRegisteredDeviceType()))
-      .registeredByOs(toMap(adminRepository.countByRegisteredOs()))
-      .registeredByBrowser(toMap(adminRepository.countByRegisteredBrowser()))
-      .lastLoginByDeviceType(toMap(adminRepository.countByLastDeviceType()))
-      .lastLoginByOs(toMap(adminRepository.countByLastOs()))
+      .registeredByDeviceType(toMap(userRepository.countByRegisteredDeviceType()))
+      .registeredByOs(toMap(userRepository.countByRegisteredOs()))
+      .registeredByBrowser(toMap(userRepository.countByRegisteredBrowser()))
+      .lastLoginByDeviceType(toMap(userRepository.countByLastDeviceType()))
+      .lastLoginByOs(toMap(userRepository.countByLastOs()))
       .avgPasswordChangeCount(avgPwdChange != null ? Math.round(avgPwdChange * 100.0) / 100.0 : 0)
       .usersNeverChangedPassword(neverChanged)
       .build();
