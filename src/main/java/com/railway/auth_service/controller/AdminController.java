@@ -8,6 +8,7 @@ import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
 import com.railway.auth_service.dto.response.UserStatusHistoryResponse;
+import com.railway.auth_service.dto.response.UsersAnalyticsDataResponse;
 import com.railway.auth_service.service.AdminAuthService;
 import com.railway.auth_service.service.AdminService;
 import com.railway.common.dto.ApiResponse;
@@ -171,6 +172,14 @@ public class AdminController {
     PagedResponse<UserStatusHistoryResponse> response = adminService.getUserStatusHistory(
       userId, page, size, sortBy, sortDir, adminId);
 
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @GetMapping(ApiConstants.USERS_ANALYTICS_DATA)
+  @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+  public ResponseEntity<ApiResponse<UsersAnalyticsDataResponse>> getUserAnalytics(){
+    log.info("fetching user analytics data");
+    UsersAnalyticsDataResponse response = adminService.getUserAnalyticsData();
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 

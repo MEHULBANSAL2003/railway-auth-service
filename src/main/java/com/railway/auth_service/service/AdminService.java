@@ -6,6 +6,7 @@ import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
 import com.railway.auth_service.dto.response.UserStatusHistoryResponse;
+import com.railway.auth_service.dto.response.UsersAnalyticsDataResponse;
 import com.railway.common.dto.PagedResponse;
 
 import java.util.Map;
@@ -36,4 +37,6 @@ public interface AdminService {
                                                                  Long adminId);
 
   ActiveSessionResponse getActiveSession(Long adminId);
+
+  UsersAnalyticsDataResponse getUserAnalyticsData();
 }

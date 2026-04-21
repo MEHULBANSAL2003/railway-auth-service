@@ -48,6 +48,7 @@ public final class ApiConstants {
   public static final String GET_MY_SESSION = "/me/session";
   public static final String GET_USER_PROFILE = "user/{userId}";
   public static final String USER_STATUS_HISTORY = "/user/{userId}/status-history";
+  public static final String USERS_ANALYTICS_DATA = "users/data";
 
   public static final String USER_AUTH = AUTH_BASE + "/user";
   public static final String USER_REGISTER = "/register/initiate";

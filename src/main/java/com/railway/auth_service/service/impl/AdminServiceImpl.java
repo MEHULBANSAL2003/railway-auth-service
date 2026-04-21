@@ -6,6 +6,7 @@ import com.railway.auth_service.dto.response.AdminResponse;
 import com.railway.auth_service.dto.response.AdminUserDetailResponse;
 import com.railway.auth_service.dto.response.CreateAdminResponse;
 import com.railway.auth_service.dto.response.UserStatusHistoryResponse;
+import com.railway.auth_service.dto.response.UsersAnalyticsDataResponse;
 import com.railway.auth_service.mapper.AdminMapper;
 import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.Admin;
@@ -14,6 +15,7 @@ import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.model.entity.UserStatusHistory;
 import com.railway.auth_service.model.enums.ActorType;
 import com.railway.auth_service.model.enums.AdminRole;
+import com.railway.auth_service.model.enums.UserStatus;
 import com.railway.auth_service.repository.AdminRepository;
 import com.railway.auth_service.repository.RefreshTokenRepository;
 import com.railway.auth_service.repository.UserRepository;
@@ -39,7 +41,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -326,6 +330,69 @@ public class AdminServiceImpl implements AdminService {
       .expiresAt(token.getExpiresAt())
       .expired(token.getExpiresAt().isBefore(Instant.now()))
       .build();
+  }
+
+
+  public UsersAnalyticsDataResponse getUserAnalyticsData() {
+
+    Instant now = Instant.now();
+    Instant startOfToday  = now.truncatedTo(ChronoUnit.DAYS);
+    Instant startOfWeek   = now.minus(7,  ChronoUnit.DAYS);
+    Instant startOfMonth  = now.minus(30, ChronoUnit.DAYS);
+
+    long totalUsers    = adminRepository.count();
+    long activeUsers   = adminRepository.countByStatus(UserStatus.ACTIVE);
+
+    long regToday  = adminRepository.countByRegisteredAtAfter(startOfToday);
+    long regWeek   = adminRepository.countByRegisteredAtAfter(startOfWeek);
+    long regMonth  = adminRepository.countByRegisteredAtAfter(startOfMonth);
+
+    long loginToday = adminRepository.countByLastLoginAtAfter(startOfToday);
+    long loginWeek  = adminRepository.countByLastLoginAtAfter(startOfWeek);
+    long loginMonth = adminRepository.countByLastLoginAtAfter(startOfMonth);
+
+    long emailVerified  = adminRepository.countByEmailVerifiedTrue();
+    long phoneVerified  = adminRepository.countByPhoneVerifiedTrue();
+    long fullyVerified  = adminRepository.countByEmailVerifiedTrueAndPhoneVerifiedTrue();
+    double emailRate    = totalUsers > 0 ? (emailVerified * 100.0 / totalUsers) : 0;
+    double phoneRate    = totalUsers > 0 ? (phoneVerified * 100.0 / totalUsers) : 0;
+
+    Double avgPwdChange = adminRepository.avgPasswordChangeCount();
+    long neverChanged   = adminRepository.countByPasswordChangeCount(0);
+
+    return UsersAnalyticsDataResponse.builder()
+      .totalUsers(totalUsers)
+      .activeUsers(activeUsers)
+      .registrationsToday(regToday)
+      .registrationsThisWeek(regWeek)
+      .registrationsThisMonth(regMonth)
+      .loginsToday(loginToday)
+      .loginsThisWeek(loginWeek)
+      .loginsThisMonth(loginMonth)
+      .emailVerifiedUsers(emailVerified)
+      .phoneVerifiedUsers(phoneVerified)
+      .fullyVerifiedUsers(fullyVerified)
+      .emailVerificationRate(Math.round(emailRate * 100.0) / 100.0)
+      .phoneVerificationRate(Math.round(phoneRate * 100.0) / 100.0)
+      .registeredByDeviceType(toMap(adminRepository.countByRegisteredDeviceType()))
+      .registeredByOs(toMap(adminRepository.countByRegisteredOs()))
+      .registeredByBrowser(toMap(adminRepository.countByRegisteredBrowser()))
+      .lastLoginByDeviceType(toMap(adminRepository.countByLastDeviceType()))
+      .lastLoginByOs(toMap(adminRepository.countByLastOs()))
+      .avgPasswordChangeCount(avgPwdChange != null ? Math.round(avgPwdChange * 100.0) / 100.0 : 0)
+      .usersNeverChangedPassword(neverChanged)
+      .build();
+  }
+
+  /** Converts List<Object[]> {key, count} rows into a LinkedHashMap */
+  private Map<String, Long> toMap(List<Object[]> rows) {
+    Map<String, Long> map = new LinkedHashMap<>();
+    for (Object[] row : rows) {
+      String key = row[0] != null ? row[0].toString() : "UNKNOWN";
+      Long   val = ((Number) row[1]).longValue();
+      map.put(key, val);
+    }
+    return map;
   }
 
 }
