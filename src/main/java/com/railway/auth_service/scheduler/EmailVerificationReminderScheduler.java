@@ -2,6 +2,7 @@ package com.railway.auth_service.scheduler;
 
 
 import com.railway.auth_service.event.AuthEventProducer;
+import com.railway.auth_service.model.enums.UserStatus;
 import com.railway.auth_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,9 @@ public class EmailVerificationReminderScheduler {
 
     for (var user : unverifiedUsers) {
       try {
+        if (user.getStatus() != UserStatus.ACTIVE){
+             continue;
+        }
         authEventProducer.publishEmailVerificationReminder(
           user.getUserId(),
           user.getEmail(),

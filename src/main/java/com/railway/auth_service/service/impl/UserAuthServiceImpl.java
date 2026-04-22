@@ -11,6 +11,7 @@ import com.railway.auth_service.dto.request.ResetPasswordVerifyRequest;
 import com.railway.auth_service.dto.response.AuthResponse;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 import com.railway.auth_service.dto.response.UserProfileResponse;
+import com.railway.auth_service.event.AuthEventProducer;
 import com.railway.auth_service.mapper.UserMapper;
 import com.railway.auth_service.model.entity.RefreshToken;
 import com.railway.auth_service.model.entity.User;
@@ -74,6 +75,7 @@ public class UserAuthServiceImpl implements UserAuthService {
   private final UserMapper userMapper;
   private final Optional<TokenBlacklistService> blacklistService;
   private final UserStatusService userStatusService;
+  private final AuthEventProducer authEventProducer;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -389,6 +391,18 @@ public class UserAuthServiceImpl implements UserAuthService {
       user.getUserId(), maskIdentifier(identifier), clientIp);
 
     UserProfileResponse profile = userMapper.toProfileResponse(user);
+
+    try {
+      authEventProducer.publishEmailVerificationReminder(
+        user.getUserId(),
+        user.getEmail(),
+        user.getFullName()
+      );
+    }
+    catch(Exception e){
+      log.error("❌ Failed to publish reminder userId={} error={}",
+        user.getUserId(), e.getMessage());
+    }
 
     return AuthResponse.builder()
       .accessToken(accessToken)
