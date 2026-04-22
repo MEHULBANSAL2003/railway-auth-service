@@ -112,4 +112,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
   Double avgPasswordChangeCount();
 
   long countByPasswordChangeCount(int count);
+
+
+
+  List<User> findAllByEmailVerifiedFalse();
 }
