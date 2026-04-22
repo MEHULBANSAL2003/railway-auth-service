@@ -17,7 +17,7 @@ public class EmailVerificationReminderScheduler {
   private final AuthEventProducer authEventProducer;
 
 
-  @Scheduled(cron = "0 0 0 */2 * *")
+  @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Kolkata")
   public void sendEmailVerificationReminders() {
     log.info("🕐 Starting email verification reminder cron");
 
