@@ -55,4 +55,9 @@ public class AuthEventProducer {
         }
       });
   }
+
+
+  public void publishAccountDeletionEvent(){
+    String correlationId = MDC.get("correlationId");
+  }
 }

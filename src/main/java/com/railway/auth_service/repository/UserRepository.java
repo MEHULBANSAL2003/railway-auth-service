@@ -116,4 +116,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
 
   List<User> findAllByEmailVerifiedFalse();
+
+  List<User> findAllByStatus(UserStatus status);
 }
