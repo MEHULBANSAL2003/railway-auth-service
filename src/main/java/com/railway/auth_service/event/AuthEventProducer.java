@@ -43,7 +43,7 @@ public class AuthEventProducer {
       sendKafkaMsg(event, correlationId, KafkaTopics.Auth.ACCOUNT_DELETION);
   }
 
-  public void publishAccountDeletionRequestEvent(Long userId,
+  public void  publishAccountDeletionRequestEvent(Long userId,
                                           String email,
                                           String fullName){
     String correlationId = MDC.get("correlationId");

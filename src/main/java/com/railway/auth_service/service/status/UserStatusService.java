@@ -1,6 +1,7 @@
 package com.railway.auth_service.service.status;
 
 import com.railway.auth_service.config.properties.AccountProperties;
+import com.railway.auth_service.event.AuthEventProducer;
 import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.model.enums.ActorType;
 import com.railway.auth_service.model.enums.UserStatus;
@@ -28,6 +29,7 @@ public class UserStatusService {
   private final UserStatusHistoryLogger historyLogger;
   private final Optional<TokenBlacklistService> blacklistService;
   private final AccountProperties accountProperties;
+  private final AuthEventProducer authEventProducer;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
@@ -54,6 +56,10 @@ public class UserStatusService {
       );
     }
     userRepository.save(user);
+
+    if(newStatus == UserStatus.DELETION_PENDING && user.isEmailVerified()){
+        authEventProducer.publishAccountDeletionRequestEvent(user.getUserId(), user.getFullName(), user.getEmail());
+    }
 
     if (killSessions && oldStatus == UserStatus.ACTIVE) {
       killUserSessions(user.getUserId());
