@@ -19,4 +19,6 @@ public interface UserService {
   RegisterInitiateResponse resendEmailOtp(Long userId);
 
   void deactivate(Long userId, String password, String ipAddress);
+
+  void deleteAccountRequest(Long userId, String password, String reason, String ipAddress);
 }

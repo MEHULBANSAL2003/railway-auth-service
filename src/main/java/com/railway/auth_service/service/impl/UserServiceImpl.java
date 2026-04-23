@@ -237,6 +237,32 @@ public class UserServiceImpl implements UserService {
     log.info("User deactivated: userId={}", userId);
   }
 
+  @Override
+  public void deleteAccountRequest(Long userId, String password, String reason, String ipAddress) {
+
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+    if (user.getStatus() != UserStatus.ACTIVE) {
+      throw new BadRequestException("Account is not active. Current status: " + user.getStatus());
+    }
+
+    if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+      throw new UnauthorizedException("Incorrect password");
+    }
+
+    userStatusService.changeStatus(
+      user,
+      UserStatus.DELETION_PENDING,
+      reason,
+      userId,
+      ActorType.USER,
+      ipAddress,
+      true    // kill sessions
+    );
+
+
+  }
 
 
 }

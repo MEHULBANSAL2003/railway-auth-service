@@ -193,4 +193,13 @@ public class User {
   @UpdateTimestamp
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
+
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
+
+  @Column(name = "deletion_scheduled_at")
+  private Instant deletionScheduledAt;
+
+  @Column(name = "deletion_reason")
+  private String deletionReason;
 }

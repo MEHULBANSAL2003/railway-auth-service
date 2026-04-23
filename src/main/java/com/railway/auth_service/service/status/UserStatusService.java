@@ -1,5 +1,6 @@
 package com.railway.auth_service.service.status;
 
+import com.railway.auth_service.config.properties.AccountProperties;
 import com.railway.auth_service.model.entity.User;
 import com.railway.auth_service.model.enums.ActorType;
 import com.railway.auth_service.model.enums.UserStatus;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 @Slf4j
@@ -25,9 +27,11 @@ public class UserStatusService {
   private final RefreshTokenRepository refreshTokenRepository;
   private final UserStatusHistoryLogger historyLogger;
   private final Optional<TokenBlacklistService> blacklistService;
+  private final AccountProperties accountProperties;
 
   @Value("${app.jwt.access-token-expiry}")
   private long accessTokenExpiry;
+
 
   @Transactional
   public void changeStatus(User user,
@@ -43,6 +47,12 @@ public class UserStatusService {
     user.setStatus(newStatus);
     user.setStatusReason(reason);
     user.setLastStatusChangeAt(Instant.now());
+    if(newStatus == UserStatus.DELETION_PENDING){
+      user.setDeletionReason(reason);
+      user.setDeletionScheduledAt(
+        Instant.now().plus(accountProperties.getDeletionGracePeriodDays(), ChronoUnit.DAYS)
+      );
+    }
     userRepository.save(user);
 
     if (killSessions && oldStatus == UserStatus.ACTIVE) {
