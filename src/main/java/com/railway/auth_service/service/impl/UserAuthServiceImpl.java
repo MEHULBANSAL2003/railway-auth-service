@@ -307,7 +307,7 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     User user = findUserByIdentifier(identifier);
 
-    // Handle DEACTIVATED — auto-reactivate
+    // Handle DEACTIVATED and DELETION_PENDING — auto-reactivate
     boolean reactivated = false;
 
     if (user.getStatus() == UserStatus.DEACTIVATED) {
@@ -324,6 +324,25 @@ public class UserAuthServiceImpl implements UserAuthService {
       );
       reactivated = true;
 
+    } else if (user.getStatus() == UserStatus.DELETION_PENDING) {
+      // User is trying to login → they want to cancel deletion
+      // Auto-cancel deletion and reactivate
+      userStatusService.changeStatus(
+        user,
+        UserStatus.ACTIVE,
+        "Deletion cancelled - user logged in during grace period",
+        user.getUserId(),
+        ActorType.USER,
+        clientIp,
+        false    // don't kill sessions — there are none (they were killed at deletion request)
+      );
+      reactivated = true;
+
+    } else if (user.getStatus() == UserStatus.DELETED) {
+      // Account has been permanently deleted — show generic error for security
+      // Don't reveal that an account existed with these credentials
+      throw new UnauthorizedException("Invalid credentials");
+
     } else if (user.getStatus() != UserStatus.ACTIVE) {
       // All other non-active statuses → reject login
       String message = switch (user.getStatus()) {
@@ -331,7 +350,6 @@ public class UserAuthServiceImpl implements UserAuthService {
           (user.getStatusReason() != null ? " " + user.getStatusReason() : " Contact support.");
         case DISABLED -> "Your account has been disabled";
         case SUSPENDED -> "Your account is under review";
-        case DELETED -> "Your account has been deleted";
         default -> "Account not active";
       };
       throw new ForbiddenException(message);
