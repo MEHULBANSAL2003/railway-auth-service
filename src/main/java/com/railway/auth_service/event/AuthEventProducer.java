@@ -1,5 +1,6 @@
 package com.railway.auth_service.event;
 
+import com.railway.auth_service.config.properties.AccountProperties;
 import com.railway.common.event.auth.AccountDeletionEvent;
 import com.railway.common.event.auth.AccountDeletionRequestEvent;
 import com.railway.common.event.auth.EmailVerificationReminderEvent;
@@ -18,6 +19,7 @@ import java.time.Instant;
 public class AuthEventProducer {
 
   private final KafkaTemplate<String, Object> kafkaTemplate;
+  private final AccountProperties accountProperties;
 
   public void publishEmailVerificationReminder(Long userId,
                                                String email,
@@ -53,7 +55,7 @@ public class AuthEventProducer {
     String userIdStr = String.valueOf(userId);
 
     var event = new AccountDeletionRequestEvent(
-      userIdStr, email, fullName, correlationId, Instant.now()
+      userIdStr, email, fullName, correlationId, Instant.now(), accountProperties.getDeletionGracePeriodDays()
     );
 
     sendKafkaMsg(event, userIdStr, correlationId, KafkaTopics.Auth.ACCOUNT_DELETION_REQUEST);
