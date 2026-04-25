@@ -57,7 +57,7 @@ public class UserStatusService {
     userRepository.save(user);
 
     if(newStatus == UserStatus.DELETION_PENDING && user.isEmailVerified()){
-        authEventProducer.publishAccountDeletionRequestEvent(user.getUserId(), user.getFullName(), user.getEmail());
+        authEventProducer.publishAccountDeletionRequestEvent(user.getUserId(), user.getEmail(),user.getFullName());
     }
 
     if (killSessions && oldStatus == UserStatus.ACTIVE) {
