@@ -47,7 +47,6 @@ public class UserStatusService {
     UserStatus oldStatus = user.getStatus();
 
     user.setStatus(newStatus);
-    user.setStatusReason(reason);
     user.setLastStatusChangeAt(Instant.now());
     if(newStatus == UserStatus.DELETION_PENDING){
       user.setDeletionReason(reason);
