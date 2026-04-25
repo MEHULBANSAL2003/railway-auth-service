@@ -267,7 +267,7 @@ public class UserServiceImpl implements UserService {
     int recoveryPeriod = accountProperties.getDeletionGracePeriodDays();
 
     return DeleteAccountRequestResponse.builder()
-      .message("Account deletion request submitted successfully. You have " + recoveryPeriod + " days to cancel this request.")
+      .message("Account deletion request submitted successfully. You have " + recoveryPeriod + " days to cancel this request. Just login again to access the account.")
       .recoveryPeriodDays(recoveryPeriod)
       .build();
   }
