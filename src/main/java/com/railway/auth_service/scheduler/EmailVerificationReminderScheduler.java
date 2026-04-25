@@ -38,6 +38,7 @@ public class EmailVerificationReminderScheduler {
           user.getFullName()
         );
         success++;
+        Thread.sleep(600);
       } catch (Exception e) {
         // WHY catch per user and not outside the loop:
         // One failed user should not stop reminders for all others.
