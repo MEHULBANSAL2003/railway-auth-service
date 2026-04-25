@@ -410,16 +410,19 @@ public class UserAuthServiceImpl implements UserAuthService {
 
     UserProfileResponse profile = userMapper.toProfileResponse(user);
 
-    try {
-      authEventProducer.publishEmailVerificationReminder(
-        user.getUserId(),
-        user.getEmail(),
-        user.getFullName()
-      );
-    }
-    catch(Exception e){
-      log.error("❌ Failed to publish reminder userId={} error={}",
-        user.getUserId(), e.getMessage());
+    // Only send email verification reminder if email is not verified
+    if (!user.isEmailVerified()) {
+      try {
+        authEventProducer.publishEmailVerificationReminder(
+          user.getUserId(),
+          user.getEmail(),
+          user.getFullName()
+        );
+      }
+      catch(Exception e){
+        log.error("❌ Failed to publish reminder userId={} error={}",
+          user.getUserId(), e.getMessage());
+      }
     }
 
     return AuthResponse.builder()
