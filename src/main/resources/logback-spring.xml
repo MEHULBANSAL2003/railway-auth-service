@@ -50,7 +50,7 @@
       <appender-ref ref="JSON_CONSOLE"/>
     </logger>
     <logger name="org.springframework.security" level="WARN"/>
-    <logger name="org.hibernate.SQL" name="WARN"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>
     <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>
     <logger name="org.apache.kafka" level="WARN"/>
   </springProfile>
