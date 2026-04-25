@@ -6,6 +6,7 @@ import com.railway.auth_service.dto.request.DeactivateRequest;
 import com.railway.auth_service.dto.request.DeleteAccountRequest;
 import com.railway.auth_service.dto.request.RefreshRequest;
 import com.railway.auth_service.dto.request.VerifyEmailOtpRequest;
+import com.railway.auth_service.dto.response.DeleteAccountRequestResponse;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 import com.railway.auth_service.dto.response.UserProfileResponse;
 import com.railway.auth_service.service.UserService;
@@ -112,16 +113,20 @@ public class UserController {
   }
 
   @PostMapping(ApiConstants.USER_ACCOUNT_DELETE_REQUEST)
-   public ResponseEntity<ApiResponse<Void>> deleteAccountRequest(
+  public ResponseEntity<ApiResponse<DeleteAccountRequestResponse>> deleteAccountRequest(
     @Valid @RequestBody DeleteAccountRequest request,
     @AuthenticationPrincipal AuthPrincipal principal,
     HttpServletRequest httpRequest
-    ){
+  ) {
     String clientIp = extractClientIp(httpRequest);
-    userService.deleteAccountRequest(principal.getId(), request.getPassword(), clientIp, clientIp);
+    DeleteAccountRequestResponse response = userService.deleteAccountRequest(
+      principal.getId(),
+      request.getPassword(),
+      request.getDeleteReason(),
+      clientIp
+    );
 
-    return ResponseEntity.ok(ApiResponse.success());
-
+    return ResponseEntity.ok(ApiResponse.success(response));
   }
 
   private String extractClientIp(HttpServletRequest request) {

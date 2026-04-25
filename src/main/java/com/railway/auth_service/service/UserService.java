@@ -1,6 +1,7 @@
 package com.railway.auth_service.service;
 
 import com.railway.auth_service.dto.request.ChangePasswordRequest;
+import com.railway.auth_service.dto.response.DeleteAccountRequestResponse;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 import com.railway.auth_service.dto.response.UserProfileResponse;
 
@@ -20,5 +21,5 @@ public interface UserService {
 
   void deactivate(Long userId, String password, String ipAddress);
 
-  void deleteAccountRequest(Long userId, String password, String reason, String ipAddress);
+  DeleteAccountRequestResponse deleteAccountRequest(Long userId, String password, String reason, String ipAddress);
 }

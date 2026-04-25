@@ -1,7 +1,9 @@
 package com.railway.auth_service.service.impl;
 
+import com.railway.auth_service.config.properties.AccountProperties;
 import com.railway.auth_service.config.properties.OtpProperties;
 import com.railway.auth_service.dto.request.ChangePasswordRequest;
+import com.railway.auth_service.dto.response.DeleteAccountRequestResponse;
 import com.railway.auth_service.dto.response.RegisterInitiateResponse;
 import com.railway.auth_service.dto.response.UserProfileResponse;
 import com.railway.auth_service.mapper.UserMapper;
@@ -42,6 +44,7 @@ public class UserServiceImpl implements UserService {
   private final PasswordEncoder passwordEncoder;
   private final OtpService otpService;
   private final OtpProperties otpProperties;
+  private final AccountProperties accountProperties;
   private final UserStatusService userStatusService;
 
   @Value("${app.jwt.access-token-expiry}")
@@ -238,7 +241,7 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public void deleteAccountRequest(Long userId, String password, String reason, String ipAddress) {
+  public DeleteAccountRequestResponse deleteAccountRequest(Long userId, String password, String reason, String ipAddress) {
 
     User user = userRepository.findById(userId)
       .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
@@ -261,7 +264,12 @@ public class UserServiceImpl implements UserService {
       true    // kill sessions
     );
 
+    int recoveryPeriod = accountProperties.getDeletionGracePeriodDays();
 
+    return DeleteAccountRequestResponse.builder()
+      .message("Account deletion request submitted successfully. You have " + recoveryPeriod + " days to cancel this request.")
+      .recoveryPeriodDays(recoveryPeriod)
+      .build();
   }
 
 
