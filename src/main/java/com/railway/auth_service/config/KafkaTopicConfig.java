@@ -18,4 +18,22 @@ public class KafkaTopicConfig {
       .replicas(1)
       .build();
   }
+
+  @Bean
+  public NewTopic accountDeletionRequestTopic() {
+    return TopicBuilder
+      .name(KafkaTopics.Auth.ACCOUNT_DELETION_REQUEST)
+      .partitions(1)
+      .replicas(1)
+      .build();
+  }
+
+  @Bean
+  public NewTopic accountDeletionTopic() {
+    return TopicBuilder
+      .name(KafkaTopics.Auth.ACCOUNT_DELETION)
+      .partitions(1)
+      .replicas(1)
+      .build();
+  }
 }
