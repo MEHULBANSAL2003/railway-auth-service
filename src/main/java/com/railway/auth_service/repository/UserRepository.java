@@ -113,6 +113,19 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
   long countByPasswordChangeCount(int count);
 
+  // ── Account Deletion Analytics ──
+
+  /**
+   * Count accounts deleted after a specific date.
+   * Used for: accountsDeletedToday, accountsDeletedLast7Days, accountsDeletedLast30Days
+   */
+  long countByDeletedAtAfter(Instant after);
+
+  /**
+   * Count accounts with deletion scheduled after a specific date.
+   * Used for: deletionRequestsToday, deletionRequestsLast7Days, deletionRequestsLast30Days
+   */
+  long countByDeletionScheduledAtAfter(Instant after);
 
 
   List<User> findAllByEmailVerifiedFalse();

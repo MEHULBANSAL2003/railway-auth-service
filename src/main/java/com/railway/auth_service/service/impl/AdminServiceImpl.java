@@ -360,6 +360,18 @@ public class AdminServiceImpl implements AdminService {
     Double avgPwdChange = userRepository.avgPasswordChangeCount();
     long neverChanged   = userRepository.countByPasswordChangeCount(0);
 
+    // ── Deletion Analytics ──
+    long deletedAccounts        = userRepository.countByStatus(UserStatus.DELETED);
+    long deletionPendingAccounts = userRepository.countByStatus(UserStatus.DELETION_PENDING);
+
+    long deletedToday      = userRepository.countByDeletedAtAfter(startOfToday);
+    long deletedLast7Days  = userRepository.countByDeletedAtAfter(startOfWeek);
+    long deletedLast30Days = userRepository.countByDeletedAtAfter(startOfMonth);
+
+    long deletionReqToday      = userRepository.countByDeletionScheduledAtAfter(startOfToday);
+    long deletionReqLast7Days  = userRepository.countByDeletionScheduledAtAfter(startOfWeek);
+    long deletionReqLast30Days = userRepository.countByDeletionScheduledAtAfter(startOfMonth);
+
     return UsersAnalyticsDataResponse.builder()
       .totalUsers(totalUsers)
       .activeUsers(activeUsers)
@@ -381,6 +393,15 @@ public class AdminServiceImpl implements AdminService {
       .lastLoginByOs(toMap(userRepository.countByLastOs()))
       .avgPasswordChangeCount(avgPwdChange != null ? Math.round(avgPwdChange * 100.0) / 100.0 : 0)
       .usersNeverChangedPassword(neverChanged)
+      // Deletion analytics
+      .deletedAccounts(deletedAccounts)
+      .deletionPendingAccounts(deletionPendingAccounts)
+      .accountsDeletedToday(deletedToday)
+      .accountsDeletedLast7Days(deletedLast7Days)
+      .accountsDeletedLast30Days(deletedLast30Days)
+      .deletionRequestsToday(deletionReqToday)
+      .deletionRequestsLast7Days(deletionReqLast7Days)
+      .deletionRequestsLast30Days(deletionReqLast30Days)
       .build();
   }
 

@@ -47,4 +47,18 @@ public class UsersAnalyticsDataResponse {
   // ── Password ──
   private double avgPasswordChangeCount;
   private long usersNeverChangedPassword;
+
+  // ── Account Deletion ──
+  private long deletedAccounts;                // Total DELETED accounts
+  private long deletionPendingAccounts;        // Total DELETION_PENDING accounts
+
+  // ── Accounts Deleted (by deletedAt date) ──
+  private long accountsDeletedToday;
+  private long accountsDeletedLast7Days;
+  private long accountsDeletedLast30Days;
+
+  // ── Deletion Requests (by deletionScheduledAt date) ──
+  private long deletionRequestsToday;
+  private long deletionRequestsLast7Days;
+  private long deletionRequestsLast30Days;
 }
