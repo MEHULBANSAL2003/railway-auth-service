@@ -20,19 +20,30 @@ public class AccountDeleteScheduler {
   private final AuthEventProducer authEventProducer;
 
 
-  @Scheduled(cron = "0 0 8 * * *", zone = "Asia/Kolkata")
+  @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Kolkata")
   public void deletePendingAccounts() {
     log.info("🕐 Starting account deletion cron");
 
     var accountToBeDeleted = userRepository.findAllByStatus(UserStatus.DELETION_PENDING);
 
-    log.info("Found {} users with unverified emails", accountToBeDeleted.size());
+    log.info("Found {} users with deletion pending request", accountToBeDeleted.size());
     int success = 0;
     int failed = 0;
+    int skipped = 0;
+
+    Instant now = Instant.now();
 
     for (var user : accountToBeDeleted) {
       try {
         if (user.getStatus() != UserStatus.DELETION_PENDING) {
+          continue;
+        }
+
+        // Only delete accounts whose deletion is scheduled for today or before
+        if (user.getDeletionScheduledAt() == null || user.getDeletionScheduledAt().isAfter(now)) {
+          log.debug("Skipping user {} - deletion scheduled for future ({})",
+            user.getUserId(), user.getDeletionScheduledAt());
+          skipped++;
           continue;
         }
         user.setDeletedAt(Instant.now());
@@ -54,8 +65,8 @@ public class AccountDeleteScheduler {
         failed++;
       }
     }
-    log.info("✅ Cron done. success={} failed={} total={}",
-      success, failed, accountToBeDeleted.size());
+    log.info("✅ Cron done. success={} failed={} skipped={} total={}",
+      success, failed, skipped, accountToBeDeleted.size());
   }
 
 }
