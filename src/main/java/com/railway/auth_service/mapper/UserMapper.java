@@ -93,6 +93,9 @@ public class UserMapper {
       .lastPasswordChangeAt(user.getLastPasswordChangeAt())
       .createdAt(user.getCreatedAt())
       .updatedAt(user.getUpdatedAt())
+      .deletedAt(user.getDeletedAt())
+      .deletionScheduledAt(user.getDeletionScheduledAt())
+      .deletionReason(user.getDeletionReason())
       .build();
   }
 }

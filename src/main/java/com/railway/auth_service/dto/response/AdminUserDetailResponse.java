@@ -47,4 +47,9 @@ public class AdminUserDetailResponse {
   // ── Timestamps ──
   private Instant createdAt;
   private Instant updatedAt;
+
+  // ── Deletion Info ──
+  private Instant deletedAt;
+  private Instant deletionScheduledAt;
+  private String deletionReason;
 }
